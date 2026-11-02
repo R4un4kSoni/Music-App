@@ -1,33 +1,40 @@
 from pathlib import Path
+from backend.metadata import get_metadata
 
-SUPPORTED_FORMATS = [
-    '.mp3',
-    '.wav',
-    '.flac',
-    '.ogg',
-    '.m4a',
-    '.aac'
-]
+
+SUPPORTED_FORMATS = {
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".ogg",
+    ".m4a",
+    ".aac",
+}
 
 
 def scan_music_folder(folder_path):
-    """
-    Scan the given folder for music files and return a list of file paths.
-    """
+
     music_folder = Path(folder_path)
+
     if not music_folder.exists():
-        raise FileNotFoundError(f"The folder {folder_path} does not exist.")
+        raise FileNotFoundError("Music folder does not exist")
+
     if not music_folder.is_dir():
-        raise NotADirectoryError(f"The path {folder_path} is not a Folder.")
+        raise NotADirectoryError("Provided path is not a folder")
 
     songs = []
 
-    for file in music_folder.rglob('*'):
+    for file in music_folder.rglob("*"):
+
         if file.is_file() and file.suffix.lower() in SUPPORTED_FORMATS:
-            songs.append({
-                "name":file.stem,
-                "path":str(file),
-                "format":file.suffix.lower()
-            })
+
+            try:
+                song_data = get_metadata(file)
+
+                if song_data is not None:
+                    songs.append(song_data)
+
+            except Exception as error:
+                print(f"Could not read {file.name}: {error}")
 
     return songs
