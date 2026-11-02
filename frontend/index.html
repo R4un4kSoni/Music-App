@@ -136,8 +136,34 @@
         <div class="empty-state"><div class="empty-orb">✳</div><h2>Your next favourite is already here.</h2><p>Discovery suggestions will appear here as your library grows.</p></div>
       </section>
       <section class="page-content alternate-page hidden" id="page-library">
-        <p class="eyebrow">ALL YOUR LOCAL TRACKS</p><h1>Your <span>Library.</span></h1><p class="subheading">One home for every track on this device.</p>
-        <div class="empty-state"><div class="empty-orb">♫</div><h2>Your library is ready for music.</h2><p>We'll connect the import-folder and track-list features to Python next.</p></div>
+
+          <p class="eyebrow">ALL YOUR LOCAL TRACKS</p>
+
+          <h1>Your <span>Library.</span></h1>
+
+          <p class="subheading">
+              One home for every track on this device.
+          </p>
+
+          <div class="library-toolbar">
+              <div>
+                  <h2>All songs</h2>
+                  <span id="library-count">Loading library...</span>
+              </div>
+
+              <button class="outline-button" id="refresh-library">
+                  ↻ Refresh
+              </button>
+          </div>
+
+          <div class="library-song-list" id="library-song-list">
+              <div class="empty-state">
+                  <div class="empty-orb">♫</div>
+                  <h2>Loading your music...</h2>
+                  <p>NeonWave is scanning your music folder.</p>
+              </div>
+          </div>
+
       </section>
       <section class="page-content alternate-page hidden" id="page-liked">
         <p class="eyebrow">THE ONES YOU LOVE</p><h1>Liked <span>Songs.</span></h1><p class="subheading">Every track worth keeping close.</p>
@@ -176,3 +202,4 @@
   <script src="js/app.js"></script>
 </body>
 </html>
+

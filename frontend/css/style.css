@@ -115,3 +115,105 @@ h1 span { color: var(--gold); }
 .cover-flow-page { flex: 1; padding: 28px 35px 110px; text-align: center; }.cover-flow-header { display: flex; justify-content: space-between; align-items: center; }.cover-flow-header .eyebrow { margin: 0; }.cover-stage { height: 350px; display: flex; justify-content: center; align-items: center; perspective: 900px; }.flow-cover { width: 205px; height: 205px; position: relative; transition: .3s; }.flow-cover .flow-art { width: 100%; height: 100%; display: grid; place-items: center; border-radius: 9px; box-shadow: 0 20px 45px #0008; font: 700 25px var(--display); letter-spacing: 2px; }.flow-left { transform: translateX(42px) rotateY(35deg) scale(.78); opacity: .65; }.flow-center { z-index: 2; transform: scale(1.12); }.flow-right { transform: translateX(-42px) rotateY(-35deg) scale(.78); opacity: .65; }.art-blue { background: linear-gradient(145deg,#9ab6c2,#243e53 60%,#15212a); }.art-orange { background: radial-gradient(circle at 65% 30%,#f0bb72,#9d4c36 45%,#302333); color: #f8e0bd; }.art-pink { background: linear-gradient(135deg,#e0b3b1,#885f77 50%,#292c43); }.flow-track { margin-top: -5px; }.flow-track .eyebrow { margin-bottom: 7px; }.flow-track h2 { margin-bottom: 5px; font-size: 23px; }.flow-track p:last-child { color: var(--muted); font-size: 10px; }.flow-controls { display: flex; justify-content: center; align-items: center; gap: 22px; margin-top: 19px; }.large-play { width: 43px; height: 43px; font-size: 14px; }
 @media (max-width: 1050px) { .app-shell { grid-template-columns: 205px minmax(0,1fr); }.sidebar { padding-inline: 12px; }.page-content { padding-inline: 23px; }.feature-grid { grid-template-columns: minmax(0,1.3fr) minmax(205px,.8fr); }.vinyl-art { right: -25px; opacity: .8; }.recent-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.collection-row { grid-template-columns: 1fr; }.player-bar { padding-inline: 17px; gap: 10px; } }
 @media (max-width: 800px) { body { min-width: 0; }.app-shell { display: block; padding: 8px; }.sidebar { min-height: auto; margin-bottom: 8px; padding: 13px; }.brand { padding: 0 5px 13px; }.sidebar-label, .sidebar-heading, .playlist-nav, .sidebar-bottom { display: none; }.primary-nav { display: flex; overflow-x: auto; }.nav-item { white-space: nowrap; padding: 9px; }.main-panel { min-height: calc(100vh - 105px); }.topbar { padding-inline: 17px; }.page-content { padding: 23px 16px 110px; }.welcome-row { align-items: start; flex-direction: column; }.feature-grid { grid-template-columns: 1fr; }.vinyl-feature { min-height: 250px; }.now-card { display: none; }.player-bar { grid-template-columns: 1fr auto; }.player-center { grid-column: 1 / -1; grid-row: 2; }.player-extra { display: none; }.player-track { grid-column: 1; }.recent-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.cover-stage { transform: scale(.8); }.cover-flow-page { padding-inline: 12px; } }
+/* =================================
+   NEONWAVE MUSIC LIBRARY
+================================= */
+
+.library-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 35px 0 20px;
+}
+
+.library-toolbar h2 {
+    margin: 0 0 5px;
+}
+
+#library-count {
+    color: var(--text-muted, #929a9b);
+    font-size: 13px;
+}
+
+.library-song-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.library-track {
+    display: grid;
+    grid-template-columns: 35px 48px minmax(140px, 1.5fr) minmax(100px, 1fr) 55px;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    transition: background 0.2s ease;
+}
+
+.library-track:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.track-number {
+    color: #929a9b;
+    font-size: 13px;
+    text-align: center;
+}
+
+.track-cover {
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #263d42, #b28b55);
+    color: white;
+    font-size: 23px;
+}
+
+.track-information {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.track-information strong {
+    color: #f3f3f0;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track-information span,
+.track-album,
+.track-duration {
+    color: #929a9b;
+    font-size: 12px;
+}
+
+.track-album {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track-duration {
+    text-align: right;
+}
+
+@media (max-width: 700px) {
+
+    .library-track {
+        grid-template-columns: 25px 42px minmax(100px, 1fr) 45px;
+        gap: 9px;
+    }
+
+    .track-album {
+        display: none;
+    }
+
+}
