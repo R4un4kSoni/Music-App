@@ -20,5 +20,6 @@ def get_metadata(file_path):
         "title": title,
         "artist": artist,
         "album": album,
-        "duration": f"{min}:{sec:02d}"  
+        "duration": f"{min}:{sec:02d}",
+        "path": str(Path(file_path).resolve())
     }

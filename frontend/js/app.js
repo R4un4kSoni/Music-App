@@ -313,6 +313,8 @@ function updatePlayer(song) {
 // ==========================================
 
 async function playSong(song) {
+    console.log("Selected song object:", song);
+    console.log("Selected song path:", song?.path);
 
     if (!pythonReady) {
         console.error("Python backend is not ready yet.");
@@ -453,3 +455,5 @@ window.addEventListener("pywebviewready", async function () {
     await loadMusicLibrary();
 
 });
+
+playSong

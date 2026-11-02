@@ -1,3 +1,4 @@
+
 from backend.library import scan_music_folder
 from backend.player import MusicPlayer
 
@@ -6,21 +7,6 @@ class NeonWaveAPI:
 
     def __init__(self):
         self.player = MusicPlayer()
-
-    def play_song(self, file_path):
-        return self.player.play(file_path)
-
-    def pause_song(self):
-        return self.player.pause()
-
-    def resume_song(self):
-        return self.player.resume()
-
-    def stop_song(self):
-        return self.player.stop()
-
-    def set_volume(self, volume):
-        return self.player.set_volume(volume)
 
     def ping(self):
         return "Python backend connected successfully!"
@@ -43,3 +29,28 @@ class NeonWaveAPI:
                 "error": str(error)
             }
 
+    def play_song(self, file_path):
+
+        import os
+
+        print("Received path:", repr(file_path))
+
+        if not isinstance(file_path, str) or not os.path.isfile(file_path):
+            return {
+                "success": False,
+                "message": "Invalid music file path"
+            }
+
+        return self.player.play(file_path)
+
+    def pause_song(self):
+        return self.player.pause()
+
+    def resume_song(self):
+        return self.player.resume()
+
+    def stop_song(self):
+        return self.player.stop()
+
+    def set_volume(self, volume):
+        return self.player.set_volume(volume)

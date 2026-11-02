@@ -8,7 +8,7 @@ SUPPORTED_FORMATS = {
     ".flac",
     ".ogg",
     ".m4a",
-    ".aac",
+    ".aac"
 }
 
 
