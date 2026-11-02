@@ -66,3 +66,21 @@ document.querySelector(".add-playlist").addEventListener("click", () => {
   showPage("playlist");
   document.getElementById("create-playlist").click();
 });
+
+window.addEventListener("pywebviewready", async function () {
+
+    const response = await window.pywebview.api.ping();
+
+    alert(response);
+
+});
+
+window.addEventListener("pywebviewready", async function () {
+
+    const result = await window.pywebview.api.get_song(
+        "/home/raunak/Music"
+    );
+
+    console.log(result);
+
+});
