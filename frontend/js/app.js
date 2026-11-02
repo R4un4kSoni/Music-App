@@ -354,6 +354,45 @@ async function playSong(song) {
 }
 
 
+// Move to the next song
+function nextSong() {
+    if (songs.length === 0) return;
+
+    let currentIndex = songs.indexOf(currentSong);
+    let nextIndex = currentIndex + 1;
+
+    if (nextIndex >= songs.length) {
+        nextIndex = 0;
+    }
+
+    playSong(songs[nextIndex]);
+}
+
+
+// Move to the previous song
+function previousSong() {
+    if (songs.length === 0) return;
+
+    let currentIndex = songs.indexOf(currentSong);
+    let previousIndex = currentIndex - 1;
+
+    if (previousIndex < 0) {
+        previousIndex = songs.length - 1;
+    }
+
+    playSong(songs[previousIndex]);
+}
+
+
+// Connect buttons
+document.getElementById("next-button")
+    ?.addEventListener("click", nextSong);
+
+document.getElementById("previous-button")
+    ?.addEventListener("click", previousSong);
+
+
+
 // ==========================================
 // 11. PLAY / PAUSE BUTTON
 // ==========================================
@@ -457,3 +496,102 @@ window.addEventListener("pywebviewready", async function () {
 });
 
 playSong
+
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+
+async function updateProgress() {
+    if (!pythonReady || !currentSong || isPaused || isSeeking) return;
+
+    try {
+        const progress = await window.pywebview.api.get_progress();
+
+        const currentTime = progress.current_time;
+        const totalTime = progress.total_time;
+
+        document.getElementById("current-time").textContent =
+            formatTime(currentTime);
+
+        document.getElementById("total-time").textContent =
+            formatTime(totalTime);
+
+        const percentage = totalTime > 0
+            ? (currentTime / totalTime) * 100
+            : 0;
+
+        document.getElementById("progress-fill").style.width =
+            `${percentage}%`;
+
+    } catch (error) {
+        console.error("Progress update error:", error);
+    }
+}
+
+
+// Update progress every second
+setInterval(updateProgress, 1000);
+
+
+let isSeeking = false;
+
+function getSeekPercentage(event) {
+    const track = document.getElementById("seek-track");
+    const rect = track.getBoundingClientRect();
+
+    return Math.max(
+        0,
+        Math.min(1, (event.clientX - rect.left) / rect.width)
+    );
+}
+
+function updateSeekPreview(event) {
+    const percentage = getSeekPercentage(event);
+
+    document.getElementById("progress-fill").style.width =
+        `${percentage * 100}%`;
+}
+
+async function finishSeeking(event) {
+    if (!isSeeking) return;
+
+    isSeeking = false;
+
+    const percentage = getSeekPercentage(event);
+
+    try {
+        const progress = await window.pywebview.api.get_progress();
+        const targetTime = percentage * progress.total_time;
+
+        await window.pywebview.api.seek_song(targetTime);
+        updateProgress();
+    } catch (error) {
+        console.error("Seek error:", error);
+    }
+}
+
+
+
+const seekTrack = document.getElementById("seek-track");
+
+seekTrack?.addEventListener("pointerdown", (event) => {
+    if (!currentSong || !pythonReady) return;
+
+    isSeeking = true;
+    seekTrack.setPointerCapture(event.pointerId);
+    updateSeekPreview(event);
+});
+
+seekTrack?.addEventListener("pointermove", (event) => {
+    if (!isSeeking) return;
+
+    updateSeekPreview(event);
+});
+
+seekTrack?.addEventListener("pointerup", finishSeeking);
+
+seekTrack?.addEventListener("pointercancel", finishSeeking);

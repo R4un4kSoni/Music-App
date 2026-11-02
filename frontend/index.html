@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,12 @@
   <title>NeonWave — Music for your space</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
   <div class="app-shell">
     <aside class="sidebar">
@@ -31,9 +35,12 @@
         <button class="icon-button add-playlist" aria-label="Create playlist" title="Create playlist">＋</button>
       </div>
       <nav class="playlist-nav" aria-label="Playlists">
-        <button class="playlist-link" data-page="playlist"><span class="playlist-dot dot-gold"></span>Late night drive</button>
-        <button class="playlist-link" data-page="playlist"><span class="playlist-dot dot-blue"></span>Focus mode</button>
-        <button class="playlist-link" data-page="playlist"><span class="playlist-dot dot-pink"></span>Old favourites</button>
+        <button class="playlist-link" data-page="playlist"><span class="playlist-dot dot-gold"></span>Late night
+          drive</button>
+        <button class="playlist-link" data-page="playlist"><span class="playlist-dot dot-blue"></span>Focus
+          mode</button>
+        <button class="playlist-link" data-page="playlist"><span class="playlist-dot dot-pink"></span>Old
+          favourites</button>
       </nav>
 
       <div class="sidebar-bottom">
@@ -93,113 +100,193 @@
           </article>
 
           <article class="now-card">
-            <div class="card-topline"><span class="eyebrow">YOUR RECENT ROTATION</span><span class="live-dot"></span></div>
+            <div class="card-topline"><span class="eyebrow">YOUR RECENT ROTATION</span><span class="live-dot"></span>
+            </div>
             <div class="mini-cover cover-one"><span>AFTER<br>HOURS</span></div>
             <div class="now-info">
-              <div><h3>Midnight City</h3><p>M83 · Hurry Up, We're Dreaming</p></div>
+              <div>
+                <h3>Midnight City</h3>
+                <p>M83 · Hurry Up, We're Dreaming</p>
+              </div>
               <button class="heart-button" aria-label="Like song">♡</button>
             </div>
             <div class="mini-progress"><span></span></div>
             <div class="time-row"><span>2:14</span><span>4:03</span></div>
-            <div class="card-play-row"><span>RECENTLY PLAYED</span><button class="play-circle" aria-label="Play">▶</button></div>
+            <div class="card-play-row"><span>RECENTLY PLAYED</span><button class="play-circle"
+                aria-label="Play">▶</button></div>
           </article>
         </div>
 
         <section class="section-block">
           <div class="section-heading">
-            <div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2>Recently played</h2></div>
+            <div>
+              <p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p>
+              <h2>Recently played</h2>
+            </div>
             <button class="text-button" data-page="library">View library <span>↗</span></button>
           </div>
           <div class="recent-grid">
-            <article class="music-tile"><div class="tile-cover cover-two"><span>BLONDE</span></div><div class="tile-meta"><strong>Self Control</strong><span>Frank Ocean</span></div><button class="tile-play" aria-label="Play Self Control">▶</button></article>
-            <article class="music-tile"><div class="tile-cover cover-three"><span>RANDOM<br>ACCESS</span></div><div class="tile-meta"><strong>Instant Crush</strong><span>Daft Punk</span></div><button class="tile-play" aria-label="Play Instant Crush">▶</button></article>
-            <article class="music-tile"><div class="tile-cover cover-four"><span>AM</span></div><div class="tile-meta"><strong>Do I Wanna Know?</strong><span>Arctic Monkeys</span></div><button class="tile-play" aria-label="Play Do I Wanna Know">▶</button></article>
-            <article class="music-tile"><div class="tile-cover cover-five"><span>THE<br>COLOUR</span></div><div class="tile-meta"><strong>Sweet Disposition</strong><span>The Temper Trap</span></div><button class="tile-play" aria-label="Play Sweet Disposition">▶</button></article>
+            <article class="music-tile">
+              <div class="tile-cover cover-two"><span>BLONDE</span></div>
+              <div class="tile-meta"><strong>Self Control</strong><span>Frank Ocean</span></div><button
+                class="tile-play" aria-label="Play Self Control">▶</button>
+            </article>
+            <article class="music-tile">
+              <div class="tile-cover cover-three"><span>RANDOM<br>ACCESS</span></div>
+              <div class="tile-meta"><strong>Instant Crush</strong><span>Daft Punk</span></div><button class="tile-play"
+                aria-label="Play Instant Crush">▶</button>
+            </article>
+            <article class="music-tile">
+              <div class="tile-cover cover-four"><span>AM</span></div>
+              <div class="tile-meta"><strong>Do I Wanna Know?</strong><span>Arctic Monkeys</span></div><button
+                class="tile-play" aria-label="Play Do I Wanna Know">▶</button>
+            </article>
+            <article class="music-tile">
+              <div class="tile-cover cover-five"><span>THE<br>COLOUR</span></div>
+              <div class="tile-meta"><strong>Sweet Disposition</strong><span>The Temper Trap</span></div><button
+                class="tile-play" aria-label="Play Sweet Disposition">▶</button>
+            </article>
           </div>
         </section>
 
         <section class="section-block library-preview">
           <div class="section-heading">
-            <div><p class="eyebrow">MADE BY YOU</p><h2>Your collections</h2></div>
+            <div>
+              <p class="eyebrow">MADE BY YOU</p>
+              <h2>Your collections</h2>
+            </div>
             <button class="text-button" data-page="library">Explore all <span>↗</span></button>
           </div>
           <div class="collection-row">
-            <button class="collection-card" data-page="liked"><span class="collection-symbol liked-symbol">♡</span><span><strong>Liked Songs</strong><small>Your personal favourites</small></span><b>→</b></button>
-            <button class="collection-card" data-page="playlist"><span class="collection-symbol playlist-symbol">≋</span><span><strong>Late night drive</strong><small>12 tracks · Playlist</small></span><b>→</b></button>
-            <button class="collection-card" data-page="library"><span class="collection-symbol library-symbol">▤</span><span><strong>All music</strong><small>Your local collection</small></span><b>→</b></button>
+            <button class="collection-card" data-page="liked"><span
+                class="collection-symbol liked-symbol">♡</span><span><strong>Liked Songs</strong><small>Your personal
+                  favourites</small></span><b>→</b></button>
+            <button class="collection-card" data-page="playlist"><span
+                class="collection-symbol playlist-symbol">≋</span><span><strong>Late night drive</strong><small>12
+                  tracks · Playlist</small></span><b>→</b></button>
+            <button class="collection-card" data-page="library"><span
+                class="collection-symbol library-symbol">▤</span><span><strong>All music</strong><small>Your local
+                  collection</small></span><b>→</b></button>
           </div>
         </section>
       </section>
 
       <section class="page-content alternate-page hidden" id="page-discover">
-        <p class="eyebrow">EXPLORE YOUR SOUND</p><h1>Discover<span>.</span></h1><p class="subheading">New corners of your own music collection.</p>
-        <div class="empty-state"><div class="empty-orb">✳</div><h2>Your next favourite is already here.</h2><p>Discovery suggestions will appear here as your library grows.</p></div>
+        <p class="eyebrow">EXPLORE YOUR SOUND</p>
+        <h1>Discover<span>.</span></h1>
+        <p class="subheading">New corners of your own music collection.</p>
+        <div class="empty-state">
+          <div class="empty-orb">✳</div>
+          <h2>Your next favourite is already here.</h2>
+          <p>Discovery suggestions will appear here as your library grows.</p>
+        </div>
       </section>
       <section class="page-content alternate-page hidden" id="page-library">
 
-          <p class="eyebrow">ALL YOUR LOCAL TRACKS</p>
+        <p class="eyebrow">ALL YOUR LOCAL TRACKS</p>
 
-          <h1>Your <span>Library.</span></h1>
+        <h1>Your <span>Library.</span></h1>
 
-          <p class="subheading">
-              One home for every track on this device.
-          </p>
+        <p class="subheading">
+          One home for every track on this device.
+        </p>
 
-          <div class="library-toolbar">
-              <div>
-                  <h2>All songs</h2>
-                  <span id="library-count">Loading library...</span>
-              </div>
-
-              <button class="outline-button" id="refresh-library">
-                  ↻ Refresh
-              </button>
+        <div class="library-toolbar">
+          <div>
+            <h2>All songs</h2>
+            <span id="library-count">Loading library...</span>
           </div>
 
-          <div class="library-song-list" id="library-song-list">
-              <div class="empty-state">
-                  <div class="empty-orb">♫</div>
-                  <h2>Loading your music...</h2>
-                  <p>NeonWave is scanning your music folder.</p>
-              </div>
+          <button class="outline-button" id="refresh-library">
+            ↻ Refresh
+          </button>
+        </div>
+
+        <div class="library-song-list" id="library-song-list">
+          <div class="empty-state">
+            <div class="empty-orb">♫</div>
+            <h2>Loading your music...</h2>
+            <p>NeonWave is scanning your music folder.</p>
           </div>
+        </div>
 
       </section>
       <section class="page-content alternate-page hidden" id="page-liked">
-        <p class="eyebrow">THE ONES YOU LOVE</p><h1>Liked <span>Songs.</span></h1><p class="subheading">Every track worth keeping close.</p>
-        <div class="empty-state"><div class="empty-orb heart-orb">♡</div><h2>Your favourites live here.</h2><p>Use the heart on a track to add it to this collection.</p></div>
+        <p class="eyebrow">THE ONES YOU LOVE</p>
+        <h1>Liked <span>Songs.</span></h1>
+        <p class="subheading">Every track worth keeping close.</p>
+        <div class="empty-state">
+          <div class="empty-orb heart-orb">♡</div>
+          <h2>Your favourites live here.</h2>
+          <p>Use the heart on a track to add it to this collection.</p>
+        </div>
       </section>
       <section class="page-content alternate-page hidden" id="page-playlist">
-        <p class="eyebrow">YOUR PERSONAL MIX</p><h1>Playlists<span>.</span></h1><p class="subheading">Collections for every mood and moment.</p>
-        <div class="empty-state"><div class="empty-orb">≋</div><h2>Make a playlist your own.</h2><p>Create, rename and organise playlists from your music library.</p><button class="outline-button" id="create-playlist">＋ Create playlist</button></div>
+        <p class="eyebrow">YOUR PERSONAL MIX</p>
+        <h1>Playlists<span>.</span></h1>
+        <p class="subheading">Collections for every mood and moment.</p>
+        <div class="empty-state">
+          <div class="empty-orb">≋</div>
+          <h2>Make a playlist your own.</h2>
+          <p>Create, rename and organise playlists from your music library.</p><button class="outline-button"
+            id="create-playlist">＋ Create playlist</button>
+        </div>
       </section>
 
       <section class="cover-flow-page hidden" id="cover-flow">
-        <div class="cover-flow-header"><button class="outline-button" id="close-cover-flow">← Back to home</button><span class="eyebrow">NOW PLAYING · COVER FLOW</span></div>
+        <div class="cover-flow-header"><button class="outline-button" id="close-cover-flow">← Back to home</button><span
+            class="eyebrow">NOW PLAYING · COVER FLOW</span></div>
         <div class="cover-stage">
-          <div class="flow-cover flow-left"><div class="flow-art art-blue">DEEP<br>BLUE</div></div>
-          <div class="flow-cover flow-center"><div class="flow-art art-orange">AFTER<br>HOURS</div></div>
-          <div class="flow-cover flow-right"><div class="flow-art art-pink">SOFT<br>FOCUS</div></div>
+          <div class="flow-cover flow-left">
+            <div class="flow-art art-blue">DEEP<br>BLUE</div>
+          </div>
+          <div class="flow-cover flow-center">
+            <div class="flow-art art-orange">AFTER<br>HOURS</div>
+          </div>
+          <div class="flow-cover flow-right">
+            <div class="flow-art art-pink">SOFT<br>FOCUS</div>
+          </div>
         </div>
-        <div class="flow-track"><p class="eyebrow">CURRENTLY SELECTED</p><h2>Midnight City</h2><p>M83 · Hurry Up, We're Dreaming</p></div>
-        <div class="flow-controls"><button class="round-button">‹</button><button class="play-circle large-play">▶</button><button class="round-button">›</button></div>
+        <div class="flow-track">
+          <p class="eyebrow">CURRENTLY SELECTED</p>
+          <h2>Midnight City</h2>
+          <p>M83 · Hurry Up, We're Dreaming</p>
+        </div>
+        <div class="flow-controls"><button class="round-button">‹</button><button
+            class="play-circle large-play">▶</button><button class="round-button">›</button></div>
       </section>
 
       <footer class="player-bar">
         <div class="player-track">
           <div class="player-thumb cover-one">A</div>
-          <div class="player-track-copy"><strong id="player-title">Midnight City</strong><span id="player-artist">M83</span></div>
+          <div class="player-track-copy"><strong id="player-title">Midnight City</strong><span
+              id="player-artist">M83</span></div>
           <button class="heart-button" aria-label="Like current song">♡</button>
         </div>
         <div class="player-center">
-          <div class="player-buttons"><button aria-label="Shuffle">⤨</button><button aria-label="Previous">|‹</button><button class="play-circle player-play" id="main-play" aria-label="Play or pause">▶</button><button aria-label="Next">›|</button><button aria-label="Repeat">↻</button></div>
-          <div class="seek-row"><span>2:14</span><div class="seek-track"><span></span></div><span>4:03</span></div>
-        </div>
-        <div class="player-extra"><button aria-label="Queue">☷</button><span>◖</span><div class="volume-track"><span></span></div></div>
+          <div class="player-buttons">
+            <button id="shuffle-button" aria-label="Shuffle">⤨</button>
+            <button id="previous-button" aria-label="Previous">|‹</button>
+            <button class="play-circle player-play" id="main-play" aria-label="Play or pause">▶</button>
+            <button id="next-button" aria-label="Next">›|</button>
+            <button id="repeat-button" aria-label="Repeat">↻</button>
+          </div>
+          <div class="seek-row">
+            <span id="current-time">0:00</span>
+
+            <div class="seek-track" id="seek-track">
+              <span id="progress-fill"></span>
+            </div>
+
+            <span id="total-time">0:00</span>
+          </div>
+          <div class="player-extra"><button aria-label="Queue">☷</button><span>◖</span>
+            <div class="volume-track"><span></span></div>
+          </div>
       </footer>
     </main>
   </div>
   <script src="js/app.js"></script>
 </body>
-</html>
 
+</html>

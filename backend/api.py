@@ -54,3 +54,9 @@ class NeonWaveAPI:
 
     def set_volume(self, volume):
         return self.player.set_volume(volume)
+
+    def get_progress(self):
+        return self.player.get_progress()
+
+    def seek_song(self, seconds):
+        return self.player.seek(seconds)
