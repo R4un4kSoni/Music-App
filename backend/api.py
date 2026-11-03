@@ -1,12 +1,24 @@
-
 from backend.library import scan_music_folder
 from backend.player import MusicPlayer
-
+from backend.database import (
+    create_tables,
+    save_songs,
+    get_all_songs
+)
+from backend.playlist import (
+    create_playlist as db_create_playlist,
+    get_all_playlists,
+    add_song_to_playlist,
+    get_playlist_songs,
+    remove_song_from_playlist,
+    delete_playlist
+)
 
 class NeonWaveAPI:
 
     def __init__(self):
         self.player = MusicPlayer()
+        create_tables()
 
     def ping(self):
         return "Python backend connected successfully!"
@@ -14,6 +26,102 @@ class NeonWaveAPI:
     def get_song(self, folder_path):
         try:
             songs = scan_music_folder(folder_path)
+
+            saved_count = save_songs(songs)
+
+            return {
+                "success": True,
+                "songs": songs,
+                "count": len(songs),
+                "saved": saved_count
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "songs": [],
+                "count": 0,
+                "error": str(error)
+            }
+
+    def get_saved_songs(self):
+        try:
+            songs = get_all_songs()
+
+            return {
+                "success": True,
+                "songs": songs,
+                "count": len(songs)
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "songs": [],
+                "count": 0,
+                "error": str(error)
+            }
+
+        # PLAYLIST MANAGEMENT
+
+    def create_playlist(self, name):
+        try:
+            playlist_id = db_create_playlist(name)
+
+            if playlist_id is None:
+                return {
+                    "success": False,
+                    "message": "Playlist name cannot be empty."
+                }
+
+            return {
+                "success": True,
+                "playlist_id": playlist_id,
+                "message": "Playlist created successfully."
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "message": str(error)
+            }
+
+    def get_playlists(self):
+        try:
+            playlists = get_all_playlists()
+
+            return {
+                "success": True,
+                "playlists": playlists,
+                "count": len(playlists)
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "playlists": [],
+                "count": 0,
+                "error": str(error)
+            }
+
+    def add_to_playlist(self, playlist_id, song_id):
+        try:
+            add_song_to_playlist(playlist_id, song_id)
+
+            return {
+                "success": True,
+                "message": "Song added to playlist."
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "message": str(error)
+            }
+
+    def get_playlist_songs(self, playlist_id):
+        try:
+            songs = get_playlist_songs(playlist_id)
 
             return {
                 "success": True,
@@ -30,7 +138,6 @@ class NeonWaveAPI:
             }
 
     def play_song(self, file_path):
-
         import os
 
         print("Received path:", repr(file_path))
@@ -60,3 +167,39 @@ class NeonWaveAPI:
 
     def seek_song(self, seconds):
         return self.player.seek(seconds)
+
+    def remove_from_playlist(self, playlist_id, song_id):
+        try:
+            remove_song_from_playlist(playlist_id, song_id)
+
+            return {
+                "success": True,
+                "message": "Song removed from playlist."
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "message": str(error)
+            }
+
+    def delete_playlist(self, playlist_id):
+        try:
+            deleted = delete_playlist(playlist_id)
+
+            if deleted:
+                return {
+                    "success": True,
+                    "message": "Playlist deleted successfully."
+                }
+
+            return {
+                "success": False,
+                "message": "Playlist not found."
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "message": str(error)
+            }

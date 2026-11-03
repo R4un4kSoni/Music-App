@@ -77,42 +77,243 @@ document.querySelectorAll(".heart-button").forEach(button => {
 
 
 // ==========================================
-// 4. PLAYLIST CREATION
+// 4. PLAYLIST MANAGEMENT
 // ==========================================
 
-document.getElementById("create-playlist").addEventListener("click", () => {
+const playlistNav = document.querySelector(".playlist-nav");
 
-    const name = window.prompt("Name your playlist:");
+async function loadPlaylists() {
+    try {
+        const result = await window.pywebview.api.get_playlists();
 
-    if (name && name.trim()) {
+        if (!result.success) {
+            console.error("Could not load playlists:", result.error);
+            return;
+        }
 
-        const link = document.createElement("button");
+        playlistNav.innerHTML = "";
 
-        link.className = "playlist-link";
-        link.dataset.page = "playlist";
+        if (result.playlists.length === 0) {
+            playlistNav.textContent = "No playlists yet";
+            return;
+        }
 
-        const dot = document.createElement("span");
-        dot.className = "playlist-dot dot-gold";
+        result.playlists.forEach(playlist => {
+            const link = document.createElement("button");
+            link.className = "playlist-link";
+            link.dataset.playlistId = playlist.id;
 
-        link.append(dot);
-        link.append(document.createTextNode(name.trim()));
+            // Playlist name section
+            const information = document.createElement("span");
+            information.className = "playlist-link-info";
 
-        document.querySelector(".playlist-nav").append(link);
+            const dot = document.createElement("span");
+            dot.className = "playlist-dot dot-gold";
 
-        link.addEventListener("click", () => {
-            showPage("playlist");
+            const name = document.createElement("span");
+            name.className = "playlist-link-name";
+            name.textContent = playlist.name;
+
+            information.append(dot, name);
+
+            // Delete button
+            const deleteButton = document.createElement("button");
+            deleteButton.className = "delete-playlist";
+            deleteButton.textContent = "×";
+            deleteButton.title = "Delete playlist";
+
+            deleteButton.addEventListener("click", async (event) => {
+                event.stopPropagation();
+
+                const confirmed = confirm(
+                    `Delete playlist "${playlist.name}"?`
+                );
+
+                if (!confirmed) return;
+
+                try {
+                    const response = await window.pywebview.api.delete_playlist(
+                        playlist.id
+                    );
+
+                    if (response.success) {
+                        if (
+                            currentPlaylist &&
+                            currentPlaylist.id === playlist.id
+                        ) {
+                            currentPlaylist = null;
+                            showPage("home");
+                        }
+
+                        await loadPlaylists();
+                    } else {
+                        alert(response.message || "Could not delete playlist.");
+                    }
+
+                } catch (error) {
+                    console.error("Delete playlist error:", error);
+                }
+            });
+
+            link.append(information, deleteButton);
+
+            link.addEventListener("click", () => {
+                showPage("playlist");
+                openPlaylist(playlist);
+            });
+
+            playlistNav.append(link);
         });
 
+    } catch (error) {
+        console.error("Playlist loading error:", error);
     }
+}
+async function openPlaylist(playlist) {
 
-});
+    currentPlaylist = playlist
 
-document.querySelector(".add-playlist").addEventListener("click", () => {
+    const title = document.getElementById("playlist-title");
+    const description = document.getElementById("playlist-description");
+    const songCount = document.getElementById("playlist-song-count");
+    const list = document.getElementById("playlist-song-list");
 
-    showPage("playlist");
-    document.getElementById("create-playlist").click();
+    title.textContent = playlist.name;
+    description.textContent = "Your personal music collection.";
 
-});
+    songCount.textContent = "Loading...";
+
+    list.innerHTML = `
+        <div class="empty-state">
+            <h2>Loading playlist...</h2>
+            <p>Retrieving your saved songs.</p>
+        </div>
+    `;
+
+    try {
+
+        const result = await window.pywebview.api.get_playlist_songs(
+            playlist.id
+        );
+
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+
+        songCount.textContent = `${result.count} songs`;
+
+        if (result.songs.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-orb">♫</div>
+                    <h2>This playlist is empty.</h2>
+                    <p>Add songs from your music library.</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = "";
+
+        result.songs.forEach((song, index) => {
+
+            const row = document.createElement("div");
+            row.className = "library-track";
+
+            row.innerHTML = `
+                <span class="track-number">${index + 1}</span>
+                <div class="track-cover">♫</div>
+                <div class="track-information">
+                    <strong></strong>
+                    <span></span>
+                </div>
+                <span class="track-album"></span>
+                <span class="track-duration"></span>
+            `;
+
+            row.querySelector(".track-information strong").textContent =
+                song.title || "Unknown Title";
+
+            row.querySelector(".track-information span").textContent =
+                song.artist || "Unknown Artist";
+
+            row.querySelector(".track-album").textContent =
+                song.album || "Unknown Album";
+
+            row.querySelector(".track-duration").textContent =
+                song.duration || "--:--";
+
+            // Remove song button
+            const removeButton = document.createElement("button");
+            removeButton.className = "remove-from-playlist";
+            removeButton.textContent = "×";
+            removeButton.title = "Remove from playlist";
+
+            removeButton.addEventListener("click", async (event) => {
+                event.stopPropagation();
+
+                const confirmed = confirm(
+                    `Remove "${song.title}" from this playlist?`
+                );
+
+                if (!confirmed) return;
+
+                try {
+                    const response = await window.pywebview.api.remove_from_playlist(
+                        playlist.id,
+                        song.id
+                    );
+
+                    if (response.success) {
+                        await openPlaylist(playlist);
+                    } else {
+                        alert(response.message || "Could not remove song.");
+                    }
+
+                } catch (error) {
+                    console.error("Remove song error:", error);
+                }
+            });
+
+            row.append(removeButton);
+
+            row.addEventListener("click", () => playSong(song));
+            list.append(row);
+
+        });
+
+    } catch (error) {
+        console.error("Playlist loading error:", error);
+        songCount.textContent = "Unable to load";
+    }
+}
+
+async function createNewPlaylist() {
+    const name = window.prompt("Name your playlist:");
+
+    if (!name || !name.trim()) return;
+
+    try {
+        const result = await window.pywebview.api.create_playlist(name.trim());
+
+        if (!result.success) {
+            alert(result.message);
+            return;
+        }
+
+        await loadPlaylists();
+
+    } catch (error) {
+        console.error("Playlist creation error:", error);
+    }
+}
+
+
+document.getElementById("create-playlist")
+    ?.addEventListener("click", createNewPlaylist);
+
+document.querySelector(".add-playlist")
+    ?.addEventListener("click", createNewPlaylist);
 
 
 // ==========================================
@@ -129,6 +330,7 @@ let songs = [];
 let currentSong = null;
 let isPaused = false;
 let pythonReady = false;
+let currentPlaylist = null;
 
 
 // ==========================================
@@ -160,42 +362,85 @@ function showLibraryMessage(title, description) {
 // ==========================================
 
 function displaySongs(songData) {
+    songs = Array.isArray(songData) ? songData : [];
+    songCount.textContent = `${songs.length} songs`;
+
+    renderSongs(songs);
+    
+}
+
+async function addSongToPlaylist(song) {
+
+    try {
+        const result = await window.pywebview.api.get_playlists();
+
+        if (!result.success || result.playlists.length === 0) {
+            alert("Create a playlist first.");
+            return;
+        }
+
+        const choices = result.playlists
+            .map((playlist, index) => `${index + 1}. ${playlist.name}`)
+            .join("\n");
+
+        const choice = Number(
+            prompt(`Add "${song.title}" to which playlist?\n\n${choices}\n\nEnter playlist number:`)
+        );
+
+        const playlist = result.playlists[choice - 1];
+
+        if (!playlist) {
+            alert("Invalid playlist selection.");
+            return;
+        }
+
+        const response = await window.pywebview.api.add_to_playlist(
+            playlist.id,
+            song.id
+        );
+
+        if (response.success) {
+            await loadPlaylists();
+
+            if (currentPlaylist && currentPlaylist.id === playlist.id) {
+                await openPlaylist(currentPlaylist);
+            }
+
+            alert(`Added to ${playlist.name}`);
+        }
+    } catch (error) {
+        console.error("Add to playlist error:", error);
+    }
+}
+
+function renderSongs(songData) {
 
     songList.innerHTML = "";
 
-    songs = songData;
-
-    songCount.textContent = `${songs.length} songs`;
-
-    if (songs.length === 0) {
-
+    if (songData.length === 0) {
         showLibraryMessage(
-            "No music found.",
-            "Add some supported audio files to your music folder."
+            "No songs found.",
+            "Try another song title, artist, or album."
         );
-
         return;
     }
 
-    songs.forEach((song, index) => {
+    songData.forEach((song, index) => {
 
         const row = document.createElement("div");
         row.className = "library-track";
 
-        // Song number
-
+        // Track number
         const number = document.createElement("span");
         number.className = "track-number";
         number.textContent = index + 1;
 
-        // Music icon
-
+        // Cover
         const cover = document.createElement("div");
         cover.className = "track-cover";
         cover.textContent = "♫";
 
-        // Song information
-
+        // Track information
         const information = document.createElement("div");
         information.className = "track-information";
 
@@ -208,90 +453,133 @@ function displaySongs(songData) {
         information.append(title, artist);
 
         // Album
-
         const album = document.createElement("span");
         album.className = "track-album";
         album.textContent = song.album || "Unknown Album";
 
         // Duration
-
         const duration = document.createElement("span");
         duration.className = "track-duration";
         duration.textContent = song.duration || "--:--";
 
-        // Add elements to row
+        // Add to playlist button
+        const addButton = document.createElement("button");
 
+        addButton.className = "add-to-playlist";
+        addButton.textContent = "+";
+        addButton.title = "Add to playlist";
+
+        addButton.style.cssText = `
+            appearance: none;
+            -webkit-appearance: none;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            padding: 0;
+            margin-left: auto;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            color: white;
+            font-size: 22px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: none;
+        `;
+
+        addButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            addSongToPlaylist(song);
+        });
+
+        // Add all elements to the row
         row.append(
             number,
             cover,
             information,
             album,
-            duration
+            duration,
+            addButton
         );
 
-        // PLAY SONG WHEN ROW IS CLICKED
-
+        // Play song when clicking the row
         row.addEventListener("click", () => {
             playSong(song);
         });
 
         songList.append(row);
-
     });
-
 }
-
-
-// ==========================================
-// 8. LOAD MUSIC LIBRARY FROM PYTHON
-// ==========================================
-
-async function loadMusicLibrary() {
-
-    songCount.textContent = "Scanning...";
-
-    showLibraryMessage(
-        "Loading your music...",
-        "Please wait while NeonWave scans your folder."
-    );
+async function addSongToPlaylist(song) {
 
     try {
+        const result = await window.pywebview.api.get_playlists();
 
-        const result = await window.pywebview.api.get_song(MUSIC_FOLDER);
-
-        console.log("Music library response:", result);
-
-        if (!result.success) {
-
-            songCount.textContent = "Unable to load";
-
-            showLibraryMessage(
-                "Could not load music.",
-                result.error || "An unknown error occurred."
-            );
-
+        if (!result.success || result.playlists.length === 0) {
+            alert("Create a playlist first.");
             return;
         }
 
-        displaySongs(result.songs);
+        const choices = result.playlists
+            .map((playlist, index) => `${index + 1}. ${playlist.name}`)
+            .join("\n");
 
-    }
-
-    catch (error) {
-
-        console.error("Music library error:", error);
-
-        songCount.textContent = "Error";
-
-        showLibraryMessage(
-            "Something went wrong.",
-            error.message
+        const choice = Number(
+            prompt(`Add "${song.title}" to which playlist?\n\n${choices}\n\nEnter playlist number:`)
         );
 
-    }
+        const playlist = result.playlists[choice - 1];
 
+        if (!playlist) {
+            alert("Invalid playlist selection.");
+            return;
+        }
+
+        const response = await window.pywebview.api.add_to_playlist(
+            playlist.id,
+            song.id
+        );
+
+        if (response.success) {
+            alert(`Added to ${playlist.name}`);
+            await loadPlaylists();
+        } else {
+            alert(response.message || "Could not add song.");
+        }
+
+    } catch (error) {
+        console.error("Add to playlist error:", error);
+    }
 }
 
+// ==========================================
+// LIBRARY SEARCH
+// ==========================================
+
+const librarySearch = document.getElementById("library-search");
+
+librarySearch?.addEventListener("input", () => {
+
+    const query = librarySearch.value.trim().toLowerCase();
+
+    const filteredSongs = songs.filter(song => {
+
+        const title = (song.title || "").toLowerCase();
+        const artist = (song.artist || "").toLowerCase();
+        const album = (song.album || "").toLowerCase();
+
+        return (
+            title.includes(query) ||
+            artist.includes(query) ||
+            album.includes(query)
+        );
+    });
+
+    renderSongs(filteredSongs);
+});
 
 // ==========================================
 // 9. UPDATE BOTTOM PLAYER
@@ -476,7 +764,7 @@ document.getElementById("play-featured").addEventListener("click", () => {
 
 document.getElementById("refresh-library").addEventListener("click", () => {
 
-    loadMusicLibrary();
+    refreshMusicLibrary();
 
 });
 
@@ -492,6 +780,7 @@ window.addEventListener("pywebviewready", async function () {
     pythonReady = true;
 
     await loadMusicLibrary();
+    await loadPlaylists();
 
 });
 
@@ -595,3 +884,76 @@ seekTrack?.addEventListener("pointermove", (event) => {
 seekTrack?.addEventListener("pointerup", finishSeeking);
 
 seekTrack?.addEventListener("pointercancel", finishSeeking);
+
+
+async function loadMusicLibrary() {
+
+    songCount.textContent = "Loading...";
+
+    showLibraryMessage(
+        "Loading your music...",
+        "Retrieving your saved music library."
+    );
+
+    try {
+        const result = await window.pywebview.api.get_saved_songs();
+
+        console.log("Database library response:", result);
+
+        if (!result.success) {
+            songCount.textContent = "Unable to load";
+
+            showLibraryMessage(
+                "Could not load music.",
+                result.error || "An unknown error occurred."
+            );
+
+            return;
+        }
+
+        displaySongs(result.songs);
+
+    } catch (error) {
+        console.error("Library loading error:", error);
+
+        songCount.textContent = "Error";
+
+        showLibraryMessage(
+            "Something went wrong.",
+            error.message
+        );
+    }
+}
+
+
+async function refreshMusicLibrary() {
+
+    songCount.textContent = "Scanning...";
+
+    showLibraryMessage(
+        "Refreshing your library...",
+        "Scanning your music folder and updating the database."
+    );
+
+    try {
+        const result = await window.pywebview.api.get_song(MUSIC_FOLDER);
+
+        if (!result.success) {
+            songCount.textContent = "Refresh failed";
+
+            showLibraryMessage(
+                "Could not refresh music.",
+                result.error || "An unknown error occurred."
+            );
+
+            return;
+        }
+
+        await loadMusicLibrary();
+
+        console.log("Library refreshed:", result.count, "songs");
+
+    } catch (error) {
+        console.error("Library refresh error:", error);
+    }
+}
