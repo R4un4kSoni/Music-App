@@ -431,3 +431,1461 @@ h1 span { color: var(--gold); }
     touch-action: none;
     user-select: none;
 }
+
+
+/* =========================================================
+   NEONWAVE — FIXED TOP GLASS PLAYER
+   The player stays visible while the library/content scrolls.
+========================================================= */
+:root {
+  --player-height: 92px;
+}
+
+.main-panel {
+  padding-top: 0;
+}
+
+/* The top player is fixed to the app viewport, not the scrolling content. */
+.player-bar {
+  position: fixed !important;
+  top: 13px;
+  left: 270px; /* app padding + sidebar + column gap */
+  right: 13px;
+  z-index: 80;
+  min-height: var(--player-height);
+  grid-template-columns: minmax(170px, 1fr) minmax(280px, 1.35fr) minmax(130px, 1fr);
+  gap: 22px;
+  padding: 12px 25px;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 20px;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,.105), rgba(255,255,255,.035) 52%, rgba(155,217,232,.055)),
+    rgba(13, 19, 29, .76);
+  -webkit-backdrop-filter: blur(30px) saturate(165%);
+  backdrop-filter: blur(30px) saturate(165%);
+  box-shadow:
+    0 18px 55px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.19),
+    inset 0 -1px 0 rgba(255,255,255,.045);
+}
+
+/* A subtle highlight along the glass surface. */
+.player-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, rgba(255,255,255,.075), transparent 38%, rgba(255,255,255,.025));
+}
+
+.player-track,
+.player-center,
+.player-extra {
+  position: relative;
+  z-index: 1;
+}
+
+.player-track { gap: 12px; }
+.player-thumb {
+  width: 49px;
+  height: 49px;
+  border-radius: 11px;
+}
+.player-track-copy strong { font-size: 12px; }
+.player-track-copy span { font-size: 10px; }
+
+.player-buttons { gap: 17px; }
+.player-buttons button,
+.player-extra button {
+  color: rgba(225,235,245,.72);
+  transition: color .2s ease, transform .2s ease, background .2s ease;
+}
+.player-buttons button:hover,
+.player-extra button:hover {
+  color: #f4fbff;
+  transform: translateY(-1px);
+}
+.player-buttons .player-play {
+  width: 39px;
+  height: 39px;
+  background: linear-gradient(145deg, #e6f4f5, #a9d3dc);
+  color: #14232b;
+  box-shadow: 0 5px 20px rgba(155,217,232,.25), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.player-buttons .player-play:hover {
+  background: #f4ffff;
+  color: #14232b;
+}
+.seek-row { max-width: 560px; gap: 10px; }
+.seek-track {
+  height: 4px;
+  background: rgba(255,255,255,.16);
+  cursor: pointer;
+}
+#progress-fill {
+  background: linear-gradient(90deg, #9bd9e8, #d9e8f4);
+  box-shadow: 0 0 10px rgba(155,217,232,.42);
+}
+.player-extra { gap: 12px; }
+.volume-track { background: rgba(255,255,255,.17); }
+.volume-track span { background: #b8dce5; }
+
+/* Make room for the fixed player and keep the page heading below it. */
+.topbar {
+  margin-top: 105px;
+  background: rgba(12,17,25,.22);
+  border-top: 1px solid rgba(255,255,255,.035);
+}
+.page-content { padding-top: 28px; }
+.cover-flow-page { padding-top: 28px; }
+
+/* Smaller desktop windows. */
+@media (max-width: 1050px) {
+  .player-bar {
+    left: 226px;
+    right: 13px;
+    grid-template-columns: minmax(130px, .9fr) minmax(250px, 1.2fr) minmax(95px, .7fr);
+    gap: 12px;
+    padding-inline: 17px;
+  }
+}
+
+/* Mobile/tablet: compact top player, with controls remaining visible. */
+@media (max-width: 800px) {
+  :root { --player-height: 112px; }
+  .player-bar {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    min-height: var(--player-height);
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 5px 12px;
+    padding: 10px 13px;
+    border-radius: 17px;
+  }
+  .player-track {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: flex-start;
+  }
+  .player-thumb { width: 39px; height: 39px; }
+  .player-track-copy strong { font-size: 11px; }
+  .player-track-copy span { font-size: 9px; }
+  .player-track .heart-button { font-size: 17px; }
+  .player-center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 5px;
+  }
+  .player-buttons { gap: 18px; }
+  .player-buttons .player-play { width: 32px; height: 32px; }
+  .player-extra { display: none; }
+  .topbar { margin-top: 124px; }
+  .page-content { padding-top: 22px; }
+  .cover-flow-page { padding-top: 20px; }
+}
+
+@media (max-width: 420px) {
+  .player-bar { padding-inline: 10px; }
+  .player-buttons { gap: 13px; }
+  .seek-row { gap: 6px; }
+}
+
+
+
+/* =========================================================
+   NEONWAVE — BOTTOM GLASS PLAYER + SIDEBAR + COLLECTIONS
+   Final layout overrides: player belongs at the bottom.
+========================================================= */
+
+/* Keep the app inside the window; let the page content scroll. */
+html,
+body {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.app-shell {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.main-panel {
+    height: calc(100vh - 28px);
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Undo the previous top-player spacing. */
+.topbar {
+    margin-top: 0 !important;
+}
+
+.page-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: 28px;
+}
+
+/* The player is now a normal bottom row of the main panel.
+   It stays visible while page-content scrolls above it. */
+.player-bar {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+
+    width: auto !important;
+    height: auto !important;
+    min-height: 88px !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+
+    margin: 0 13px 13px !important;
+    padding: 10px 22px !important;
+    display: grid !important;
+    grid-template-columns: minmax(160px, 1fr) minmax(260px, 1.25fr) minmax(110px, 1fr) !important;
+    align-items: center !important;
+    gap: 18px !important;
+
+    border: 1px solid rgba(255,255,255,.16) !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(115deg,
+            rgba(255,255,255,.105),
+            rgba(255,255,255,.035) 48%,
+            rgba(130,210,220,.055)),
+        rgba(18, 26, 34, .78) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(165%) !important;
+    backdrop-filter: blur(28px) saturate(165%) !important;
+    box-shadow:
+        0 10px 35px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.19),
+        inset 0 -1px 0 rgba(255,255,255,.045) !important;
+    z-index: 20 !important;
+}
+
+.player-bar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+        110deg,
+        rgba(255,255,255,.09),
+        transparent 38%,
+        rgba(255,255,255,.025)
+    );
+}
+
+.player-track,
+.player-center,
+.player-extra {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.player-center {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px !important;
+}
+
+.player-buttons {
+    gap: 15px !important;
+}
+
+.player-buttons > button:not(.player-play),
+.player-extra > button {
+    width: 34px;
+    height: 34px;
+    padding: 0 !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    border-radius: 50% !important;
+    background: rgba(255,255,255,.065) !important;
+    color: rgba(226,240,243,.82) !important;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transition: .22s ease;
+}
+
+.player-buttons > button:not(.player-play):hover,
+.player-extra > button:hover {
+    background: rgba(145,220,230,.19) !important;
+    border-color: rgba(145,220,230,.42) !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 18px rgba(100,205,220,.15);
+}
+
+.player-buttons .player-play {
+    width: 42px !important;
+    height: 42px !important;
+    border: 1px solid rgba(255,255,255,.55) !important;
+    border-radius: 50% !important;
+    background: linear-gradient(145deg,#e9fbfc,#a9d8df) !important;
+    color: #15272e !important;
+    box-shadow:
+        0 5px 20px rgba(130,215,225,.25),
+        inset 0 1px 2px rgba(255,255,255,.9) !important;
+}
+
+.player-buttons .player-play:hover {
+    transform: scale(1.07);
+    box-shadow: 0 6px 24px rgba(130,215,225,.38) !important;
+}
+
+.seek-row {
+    width: 100%;
+    max-width: 520px;
+}
+
+.seek-track {
+    background: rgba(255,255,255,.17) !important;
+}
+
+#progress-fill {
+    background: linear-gradient(90deg,#9bd9e8,#e0f5f7) !important;
+    box-shadow: 0 0 10px rgba(155,217,232,.4);
+}
+
+.player-extra {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 11px;
+}
+
+.volume-track {
+    background: rgba(255,255,255,.17) !important;
+}
+
+.volume-track span {
+    background: #b8dce5 !important;
+}
+
+/* =========================================================
+   SIDEBAR — FROSTED GLASS NAVIGATION
+========================================================= */
+
+.sidebar {
+    position: relative;
+    isolation: isolate;
+    background:
+        linear-gradient(145deg,
+            rgba(255,255,255,.075),
+            rgba(255,255,255,.018) 55%),
+        rgba(19,29,32,.72) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(155%);
+    backdrop-filter: blur(28px) saturate(155%);
+    box-shadow:
+        0 12px 38px rgba(0,0,0,.2),
+        inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.sidebar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 8% 5%,rgba(99,216,216,.09),transparent 34%),
+        linear-gradient(160deg,rgba(255,255,255,.035),transparent 45%);
+}
+
+.nav-item,
+.playlist-link {
+    position: relative;
+    border: 1px solid transparent !important;
+    background: rgba(255,255,255,.018) !important;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition:
+        background .25s ease,
+        border-color .25s ease,
+        box-shadow .25s ease,
+        transform .25s ease,
+        color .25s ease !important;
+}
+
+.nav-item:hover,
+.playlist-link:hover {
+    background: linear-gradient(
+        110deg,
+        rgba(255,255,255,.115),
+        rgba(255,255,255,.045)
+    ) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: #f7ffff !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.12),
+        0 5px 18px rgba(0,0,0,.12);
+    transform: translateX(2px);
+}
+
+.nav-item.active {
+    background: linear-gradient(
+        110deg,
+        rgba(99,216,216,.16),
+        rgba(255,255,255,.065)
+    ) !important;
+    border-color: rgba(99,216,216,.22) !important;
+    color: #f3fbf8 !important;
+    box-shadow:
+        inset 2px 0 var(--gold),
+        inset 0 1px 0 rgba(255,255,255,.12),
+        0 5px 18px rgba(0,0,0,.13);
+}
+
+.nav-icon {
+    filter: drop-shadow(0 0 5px rgba(99,216,216,.22));
+}
+
+.storage-card {
+    background: rgba(255,255,255,.055) !important;
+    border: 1px solid rgba(255,255,255,.09);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+/* =========================================================
+   YOUR COLLECTIONS — APPLE-STYLE HOVERING GLASS CARDS
+========================================================= */
+
+.collection-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 65px;
+    border: 1px solid rgba(255,255,255,.11) !important;
+    background:
+        linear-gradient(135deg,
+            rgba(255,255,255,.075),
+            rgba(255,255,255,.018) 65%),
+        rgba(28,38,40,.48) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    backdrop-filter: blur(18px) saturate(145%);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 5px 18px rgba(0,0,0,.08);
+    transition:
+        transform .3s cubic-bezier(.2,.8,.2,1),
+        background .3s ease,
+        border-color .3s ease,
+        box-shadow .3s ease !important;
+}
+
+.collection-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(115deg,
+            rgba(255,255,255,.2),
+            rgba(255,255,255,.045) 38%,
+            transparent 68%);
+    transition: opacity .3s ease;
+}
+
+.collection-card:hover {
+    transform: translateY(-4px) scale(1.012);
+    border-color: rgba(185,235,240,.34) !important;
+    background:
+        linear-gradient(130deg,
+            rgba(255,255,255,.16),
+            rgba(255,255,255,.055) 62%),
+        rgba(55,75,80,.55) !important;
+    box-shadow:
+        0 12px 28px rgba(0,0,0,.2),
+        0 0 22px rgba(110,210,220,.09),
+        inset 0 1px 0 rgba(255,255,255,.24),
+        inset 0 -1px 0 rgba(255,255,255,.06);
+}
+
+.collection-card:hover::before {
+    opacity: 1;
+}
+
+.collection-card:hover .collection-symbol {
+    transform: scale(1.07);
+    filter: brightness(1.18);
+}
+
+.collection-symbol {
+    transition: transform .3s ease, filter .3s ease;
+}
+
+.collection-card b {
+    transition: transform .25s ease, color .25s ease;
+}
+
+.collection-card:hover b {
+    transform: translateX(3px);
+    color: #d9faff;
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+    .collection-card,
+    .collection-symbol,
+    .nav-item,
+    .playlist-link,
+    .player-buttons button {
+        transition: none !important;
+    }
+}
+
+/* Smaller desktop windows. */
+@media (max-width: 1050px) {
+    .player-bar {
+        grid-template-columns: minmax(120px,.9fr) minmax(220px,1.2fr) minmax(80px,.7fr) !important;
+        gap: 10px !important;
+        padding-inline: 14px !important;
+    }
+}
+
+/* Compact player on narrow windows. */
+@media (max-width: 800px) {
+    html,
+    body {
+        overflow: auto;
+    }
+
+    .app-shell {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+
+    .main-panel {
+        height: auto;
+        min-height: calc(100vh - 105px);
+        overflow: visible;
+    }
+
+    .page-content {
+        overflow: visible;
+        padding-bottom: 24px;
+    }
+
+    .player-bar {
+        position: sticky !important;
+        bottom: 8px !important;
+        margin: 8px !important;
+        min-height: 105px !important;
+        grid-template-columns: minmax(0,1fr) !important;
+        gap: 8px !important;
+    }
+
+    .player-track {
+        justify-content: center;
+    }
+
+    .player-center {
+        grid-column: 1 !important;
+    }
+
+    .player-extra {
+        display: none !important;
+    }
+}
+
+
+
+/* =========================================================
+   NEONWAVE — PLAYER POLISH + COLOUR-GRADED COVER FLOW
+========================================================= */
+
+/* A slimmer bottom player with a dedicated glass volume capsule. */
+.player-bar {
+    min-height: 72px !important;
+    padding: 7px 18px !important;
+    grid-template-columns: minmax(170px, 1fr) minmax(250px, 1.25fr) minmax(150px, .8fr) !important;
+    gap: 14px !important;
+}
+
+.player-track {
+    gap: 11px;
+}
+
+.player-thumb {
+    width: 43px !important;
+    height: 43px !important;
+    border-radius: 11px !important;
+    box-shadow: 0 5px 16px rgba(0,0,0,.22);
+}
+
+.player-track-copy strong {
+    font-size: 12px;
+}
+
+.player-track-copy span {
+    font-size: 10px;
+}
+
+.player-center {
+    gap: 4px !important;
+}
+
+.player-buttons {
+    gap: 12px !important;
+}
+
+.player-buttons > button:not(.player-play) {
+    width: 30px;
+    height: 30px;
+    font-size: 13px !important;
+}
+
+.player-buttons .player-play {
+    width: 38px !important;
+    height: 38px !important;
+}
+
+.seek-row {
+    max-width: 440px;
+    gap: 9px;
+}
+
+.seek-row > span {
+    font-size: 9px;
+}
+
+/* Right-hand queue + half-moon volume controls as one glass unit. */
+.player-extra {
+    justify-self: end;
+    min-height: 42px;
+    padding: 4px 10px;
+    gap: 10px !important;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 15px;
+    background: linear-gradient(
+        135deg,
+        rgba(255,255,255,.105),
+        rgba(255,255,255,.035)
+    );
+    -webkit-backdrop-filter: blur(18px) saturate(155%);
+    backdrop-filter: blur(18px) saturate(155%);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.13),
+        0 4px 14px rgba(0,0,0,.12);
+}
+
+.player-extra > button {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,.065) !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+}
+
+.player-extra > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    color: #c8e7eb;
+    font-size: 16px;
+    background: rgba(160,220,230,.10);
+    border: 1px solid rgba(190,235,240,.15);
+    text-shadow: 0 0 10px rgba(145,220,230,.25);
+}
+
+.volume-track {
+    width: 68px !important;
+    height: 4px !important;
+    border-radius: 99px;
+    background: rgba(255,255,255,.17) !important;
+}
+
+.volume-track span {
+    border-radius: inherit;
+    background: linear-gradient(90deg,#8fcbd8,#e1f7f8) !important;
+    box-shadow: 0 0 9px rgba(140,215,225,.25);
+}
+
+/* =========================================================
+   COVER FLOW — COLOUR-GRADED AMBIENT BACKDROP
+========================================================= */
+
+.cover-flow-page {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 24px 35px 48px !important;
+    min-height: 0;
+    background:
+        radial-gradient(ellipse at 50% 37%,
+            rgba(190,111,69,.24) 0%,
+            rgba(117,68,74,.15) 24%,
+            transparent 53%),
+        radial-gradient(ellipse at 16% 55%,
+            rgba(63,139,157,.23) 0%,
+            transparent 48%),
+        radial-gradient(ellipse at 88% 53%,
+            rgba(133,83,126,.22) 0%,
+            transparent 47%),
+        linear-gradient(135deg,
+            #1c2a30 0%,
+            #202b31 38%,
+            #28272f 72%,
+            #1c292d 100%) !important;
+    border-radius: 0 0 16px 16px;
+}
+
+.cover-flow-page::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    opacity: .55;
+    background:
+        radial-gradient(ellipse at 50% 48%,
+            transparent 15%,
+            rgba(8,14,18,.12) 75%,
+            rgba(8,14,18,.22) 100%),
+        linear-gradient(115deg,
+            rgba(255,255,255,.045),
+            transparent 34%,
+            rgba(255,255,255,.025) 72%,
+            transparent);
+}
+
+.cover-flow-page::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 65%;
+    height: 42%;
+    left: 17.5%;
+    top: 28%;
+    pointer-events: none;
+    background: radial-gradient(ellipse,
+        rgba(211,151,111,.13),
+        rgba(104,154,166,.08) 42%,
+        transparent 72%);
+    filter: blur(38px);
+}
+
+.cover-flow-header,
+.cover-stage,
+.flow-track,
+.flow-controls {
+    position: relative;
+    z-index: 1;
+}
+
+.cover-flow-header .outline-button {
+    background: rgba(255,255,255,.075) !important;
+    border-color: rgba(255,255,255,.18) !important;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.cover-stage {
+    height: 365px !important;
+    perspective: 1100px;
+    transform-style: preserve-3d;
+}
+
+/* Real mirrored album-art reflection fading into the background. */
+.flow-cover .flow-art {
+    position: relative;
+    overflow: visible !important;
+    -webkit-box-reflect: below 7px
+        linear-gradient(
+            transparent 0%,
+            rgba(10,16,20,.10) 28%,
+            rgba(10,16,20,.32) 68%,
+            transparent 100%
+        );
+    box-shadow:
+        0 22px 48px rgba(0,0,0,.32),
+        0 0 30px rgba(210,160,120,.07),
+        inset 0 1px 0 rgba(255,255,255,.17) !important;
+}
+
+.flow-cover {
+    filter: drop-shadow(0 16px 24px rgba(0,0,0,.15));
+}
+
+.flow-center .flow-art {
+    box-shadow:
+        0 24px 52px rgba(0,0,0,.34),
+        0 0 38px rgba(235,160,105,.18),
+        inset 0 1px 0 rgba(255,255,255,.2) !important;
+}
+
+.flow-left .flow-art {
+    box-shadow:
+        0 18px 38px rgba(0,0,0,.26),
+        0 0 26px rgba(100,190,210,.13),
+        inset 0 1px 0 rgba(255,255,255,.15) !important;
+}
+
+.flow-right .flow-art {
+    box-shadow:
+        0 18px 38px rgba(0,0,0,.26),
+        0 0 26px rgba(190,125,175,.13),
+        inset 0 1px 0 rgba(255,255,255,.15) !important;
+}
+
+.flow-track {
+    margin-top: 3px !important;
+    text-shadow: 0 2px 15px rgba(0,0,0,.24);
+}
+
+.flow-track h2 {
+    color: #f3eee8;
+}
+
+.flow-track p:last-child {
+    color: rgba(220,226,225,.66) !important;
+}
+
+.flow-controls .round-button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(255,255,255,.17) !important;
+    background: rgba(255,255,255,.075) !important;
+    color: #e7f0ef !important;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.flow-controls .round-button:hover {
+    background: rgba(255,255,255,.16) !important;
+    transform: translateY(-2px);
+}
+
+.flow-controls .large-play {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(145deg,#f3c17b,#d9943d) !important;
+    color: #2d2118 !important;
+    box-shadow:
+        0 7px 24px rgba(218,151,65,.28),
+        inset 0 1px 2px rgba(255,255,255,.5);
+}
+
+/* Narrow-window adjustments. */
+@media (max-width: 1050px) {
+    .player-bar {
+        min-height: 68px !important;
+        padding: 6px 12px !important;
+        grid-template-columns: minmax(125px,.9fr) minmax(210px,1.2fr) minmax(115px,.8fr) !important;
+        gap: 8px !important;
+    }
+
+    .player-extra {
+        padding-inline: 6px;
+        gap: 6px !important;
+    }
+
+    .volume-track {
+        width: 48px !important;
+    }
+}
+
+@media (max-width: 800px) {
+    .player-bar {
+        min-height: 96px !important;
+        padding: 8px 12px !important;
+        grid-template-columns: minmax(0,1fr) !important;
+    }
+
+    .player-extra {
+        display: none !important;
+    }
+
+    .cover-flow-page {
+        padding-inline: 12px !important;
+    }
+
+    .cover-stage {
+        height: 300px !important;
+        transform: scale(.82);
+        transform-origin: center center;
+    }
+}
+
+/* =========================================================
+   NEONWAVE — AMBIENT TRANSPARENT GLASS THEME
+   Reference direction: luminous backdrop + frosted panels + fine grain.
+========================================================= */
+:root {
+  --glass-line: rgba(255,255,255,.20);
+  --glass-white: rgba(255,255,255,.10);
+  --glass-shadow: 0 22px 65px rgba(8, 5, 28, .26);
+}
+
+html, body {
+    background: #21170f !important;
+
+    background-image:
+        radial-gradient(
+            ellipse at 12% 12%,
+            rgba(211, 133, 65, .30),
+            transparent 42%
+        ),
+        radial-gradient(
+            ellipse at 88% 18%,
+            rgba(190, 112, 52, .20),
+            transparent 38%
+        ),
+        radial-gradient(
+            ellipse at 75% 90%,
+            rgba(125, 65, 35, .22),
+            transparent 42%
+        ),
+        radial-gradient(
+            ellipse at 30% 80%,
+            rgba(224, 165, 99, .13),
+            transparent 45%
+        ),
+        linear-gradient(
+            135deg,
+            #21150f 0%,
+            #382317 50%,
+            #19110e 100%
+        ) !important;
+
+    background-attachment: fixed !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .20;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.34'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+.app-shell {
+  background: transparent !important;
+  gap: 14px;
+}
+
+.sidebar,
+.main-panel {
+  background: linear-gradient(145deg, rgba(255,255,255,.13), rgba(255,255,255,.035) 55%), rgba(25,15,58,.40) !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(155%);
+  backdrop-filter: blur(34px) saturate(155%);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.sidebar::after,
+.main-panel::after,
+.vinyl-feature::after,
+.now-card::after,
+.music-tile::after,
+.collection-card::after,
+.player-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: .11;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.55'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+.sidebar { overflow: hidden; }
+.main-panel { position: relative; isolation: isolate; }
+.main-panel > * { position: relative; z-index: 1; }
+.topbar {
+  background: rgba(255,255,255,.035) !important;
+  border-bottom-color: rgba(255,255,255,.11) !important;
+}
+
+/* Individual surfaces should read as separate translucent panes. */
+.vinyl-feature,
+.now-card,
+.music-tile,
+.collection-card,
+.empty-state,
+.library-track {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.17) !important;
+  background: linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.035) 62%), rgba(35,22,78,.36) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 12px 34px rgba(8,5,28,.15), inset 0 1px 0 rgba(255,255,255,.13);
+}
+.vinyl-feature > *, .now-card > *, .music-tile > *, .collection-card > *, .player-bar > * {
+  position: relative;
+  z-index: 1;
+}
+.now-card { color: #fff !important; }
+.now-card .card-topline .eyebrow,
+.now-info p,
+.time-row, .card-play-row { color: rgba(255,255,255,.62) !important; }
+.music-tile:hover, .collection-card:hover {
+  background: linear-gradient(135deg,rgba(255,255,255,.19),rgba(255,255,255,.06)), rgba(50,30,105,.48) !important;
+  border-color: rgba(255,255,255,.28) !important;
+}
+.library-track:hover { background: rgba(255,255,255,.09) !important; }
+
+/* Album-art player dock — compact, floating and glassy. */
+.player-bar {
+  position: relative !important;
+  isolation: isolate;
+  min-height: 82px !important;
+  margin: 0 13px 13px !important;
+  padding: 10px 18px !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  border-radius: 22px !important;
+  background: linear-gradient(110deg,rgba(255,255,255,.16),rgba(255,255,255,.055) 48%,rgba(194,154,255,.10)), rgba(25,14,61,.58) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(175%) !important;
+  backdrop-filter: blur(32px) saturate(175%) !important;
+  box-shadow: 0 14px 42px rgba(8,4,30,.28), inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(255,255,255,.06) !important;
+}
+.player-bar::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(100deg,rgba(255,255,255,.11),transparent 35%,rgba(255,255,255,.045));
+}
+.player-thumb { border-radius: 9px !important; box-shadow: 0 5px 18px rgba(0,0,0,.28) !important; }
+.player-track-copy strong { color: #fff !important; }
+.player-track-copy span { color: rgba(255,255,255,.65) !important; }
+.player-buttons > button:not(.player-play), .player-extra > button { color: rgba(255,255,255,.78) !important; }
+.player-buttons .player-play {
+  background: linear-gradient(145deg,#fff,#d8c7ff) !important;
+  color: #32145f !important;
+  box-shadow: 0 5px 22px rgba(226,205,255,.30), inset 0 1px 2px #fff !important;
+}
+.seek-row span { color: rgba(255,255,255,.58) !important; }
+.seek-track { background: rgba(255,255,255,.22) !important; }
+#progress-fill { background: linear-gradient(90deg,#f4d8ff,#b8a0ff) !important; box-shadow: 0 0 12px rgba(219,186,255,.55); }
+.player-extra { background: rgba(255,255,255,.075) !important; border-color: rgba(255,255,255,.15) !important; }
+
+/* Cover Flow: layered physical-looking album cards. */
+.cover-flow-page {
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(255,179,103,.19),transparent 44%),
+    radial-gradient(ellipse at 12% 55%,rgba(100,185,255,.18),transparent 42%),
+    radial-gradient(ellipse at 90% 55%,rgba(238,125,205,.18),transparent 42%),
+    rgba(28,15,67,.25) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  backdrop-filter: blur(20px) saturate(145%);
+}
+.cover-stage {
+  position: relative;
+  height: 390px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1250px;
+  transform-style: preserve-3d;
+  overflow: visible;
+}
+.flow-cover {
+  position: absolute !important;
+  left: 50%;
+  top: 50%;
+  width: clamp(175px,22vw,255px) !important;
+  height: clamp(175px,22vw,255px) !important;
+  margin: 0 !important;
+  transform-style: preserve-3d;
+  transition: transform .65s cubic-bezier(.2,.75,.2,1), opacity .5s ease, filter .5s ease;
+}
+.flow-cover .flow-art {
+  width: 100%; height: 100%;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,.27);
+  box-shadow: 0 25px 55px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.22) !important;
+  -webkit-box-reflect: below 9px linear-gradient(transparent 0%,rgba(12,6,28,.13) 35%,rgba(12,6,28,.28) 70%,transparent 100%);
+}
+.flow-left { transform: translate(-132%,-50%) rotateY(32deg) scale(.78) !important; opacity: .78; z-index: 2; }
+.flow-center { transform: translate(-50%,-50%) scale(1.08) !important; opacity: 1; z-index: 5; }
+.flow-right { transform: translate(32%,-50%) rotateY(-32deg) scale(.78) !important; opacity: .78; z-index: 2; }
+.flow-far-left { transform: translate(-205%,-50%) rotateY(42deg) scale(.62) !important; opacity: .42; z-index: 1; }
+.flow-far-right { transform: translate(105%,-50%) rotateY(-42deg) scale(.62) !important; opacity: .42; z-index: 1; }
+.flow-track { margin-top: 0 !important; }
+.flow-track h2 { font-size: clamp(22px,3vw,30px) !important; }
+.flow-controls { margin-top: 22px !important; }
+
+@media (max-width: 800px) {
+  .app-shell { background: transparent !important; }
+  .sidebar, .main-panel { background: rgba(25,15,58,.58) !important; }
+  .player-bar { margin: 8px !important; }
+  .cover-stage { height: 300px !important; }
+  .flow-cover { width: 170px !important; height: 170px !important; }
+  .flow-left { transform: translate(-112%,-50%) rotateY(30deg) scale(.72) !important; }
+  .flow-right { transform: translate(12%,-50%) rotateY(-30deg) scale(.72) !important; }
+  .flow-far-left, .flow-far-right { opacity: 0 !important; }
+}
+.sidebar > * { position: relative; z-index: 1; }
+
+/* =========================================================
+   NEONWAVE — SUBTLE AMBIENT GLASS FINISH
+   Softer colour grading: keep the background visible without
+   letting purple/amber colour washes overpower the interface.
+========================================================= */
+:root {
+  --glass-line: rgba(255,255,255,.14);
+  --glass-shadow: 0 18px 48px rgba(8, 6, 18, .22);
+}
+
+html, body {
+  background-color: #17151b !important;
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(117, 77, 164, .30), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(157, 111, 76, .16), transparent 40%),
+    linear-gradient(135deg, #17151b 0%, #211d27 52%, #18171d 100%) !important;
+  background-attachment: fixed !important;
+}
+
+body::before {
+  opacity: .075 !important;
+  mix-blend-mode: soft-light;
+}
+
+.sidebar,
+.main-panel {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.018) 58%),
+    rgba(24, 22, 29, .58) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(118%);
+  backdrop-filter: blur(30px) saturate(118%);
+  box-shadow: 0 18px 48px rgba(8,6,18,.20), inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+/* Fine grain should be felt, not seen as a pattern. */
+.sidebar::after,
+.main-panel::after,
+.vinyl-feature::after,
+.now-card::after,
+.music-tile::after,
+.collection-card::after,
+.player-bar::after {
+  opacity: .055 !important;
+}
+
+.topbar {
+  background: rgba(255,255,255,.018) !important;
+  border-bottom-color: rgba(255,255,255,.075) !important;
+}
+
+.vinyl-feature,
+.now-card,
+.music-tile,
+.collection-card,
+.empty-state,
+.library-track {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.018) 65%),
+    rgba(31, 28, 36, .42) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(118%);
+  backdrop-filter: blur(22px) saturate(118%);
+  box-shadow: 0 10px 28px rgba(8,6,18,.13), inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+.now-card { color: var(--text) !important; }
+.now-card .card-topline .eyebrow,
+.now-info p,
+.time-row,
+.card-play-row { color: rgba(243,240,232,.58) !important; }
+
+.music-tile:hover,
+.collection-card:hover {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.035)),
+    rgba(42, 36, 49, .48) !important;
+  border-color: rgba(255,255,255,.19) !important;
+}
+
+.library-track:hover { background: rgba(255,255,255,.065) !important; }
+
+/* Floating player: soft neutral glass with just a hint of violet. */
+.player-bar {
+  background:
+    linear-gradient(110deg, rgba(255,255,255,.105), rgba(255,255,255,.028) 52%, rgba(174,151,201,.045)),
+    rgba(27, 24, 33, .62) !important;
+  border-color: rgba(255,255,255,.17) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(125%) !important;
+  backdrop-filter: blur(30px) saturate(125%) !important;
+  box-shadow: 0 12px 36px rgba(8,5,18,.23), inset 0 1px 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(255,255,255,.035) !important;
+}
+
+.player-bar::before {
+  background: linear-gradient(100deg, rgba(255,255,255,.075), transparent 38%, rgba(255,255,255,.018)) !important;
+}
+
+.player-buttons .player-play {
+  background: linear-gradient(145deg, #f5f1fa, #d8cde4) !important;
+  color: #292230 !important;
+  box-shadow: 0 4px 16px rgba(225,211,241,.16), inset 0 1px 2px rgba(255,255,255,.8) !important;
+}
+
+#progress-fill {
+  background: linear-gradient(90deg, #d8c9e8, #a99abb) !important;
+  box-shadow: 0 0 8px rgba(196,174,220,.22) !important;
+}
+
+/* Cover Flow keeps its warm/cool atmosphere, but with restrained tint. */
+.cover-flow-page {
+  background:
+    radial-gradient(ellipse at 50% 43%, rgba(190,145,112,.105), transparent 47%),
+    radial-gradient(ellipse at 13% 55%, rgba(115,151,164,.085), transparent 44%),
+    radial-gradient(ellipse at 88% 55%, rgba(157,125,157,.085), transparent 44%),
+    rgba(25, 22, 30, .22) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
+  backdrop-filter: blur(18px) saturate(112%);
+}
+
+.flow-cover .flow-art {
+  border-color: rgba(255,255,255,.20) !important;
+  box-shadow: 0 22px 48px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.17) !important;
+}
+
+@media (max-width: 800px) {
+  .sidebar,
+  .main-panel {
+    background:
+      linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.018)),
+      rgba(24,22,29,.70) !important;
+  }
+}
+
+/* =========================================================
+   NEONWAVE — PLAYER CONTROLS INLINE AT FAR RIGHT
+   Keep track info left, playback in the middle, and move
+   the queue/volume glass capsule to the player's right edge.
+========================================================= */
+/* PLAYER — THREE-PART INLINE LAYOUT */
+
+/* PLAYER — FIXED THREE-ZONE POSITIONING */
+
+.player-bar {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+/* Move playback controls slightly LEFT */
+.player-center {
+    position: static !important;
+    margin-left: -85px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Put volume and queue at the RIGHT END */
+.player-extra {
+    position: absolute !important;
+    top: 50% !important;
+    right: 24px !important;
+    left: auto !important;
+    bottom: auto !important;
+
+    transform: translateY(-50%) !important;
+    margin: 0 !important;
+    width: auto !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+
+    z-index: 10 !important;
+}
+
+/* Keep the progress bar compact */
+.player-center .seek-row {
+    max-width: 390px !important;
+}
+
+/* Smaller desktop screens */
+@media (max-width: 1050px) and (min-width: 801px) {
+    .player-center {
+        margin-left: -45px !important;
+    }
+
+    .player-extra {
+        right: 12px !important;
+        gap: 6px !important;
+    }
+}
+
+/* Keep the central playback controls clear of the right capsule. */
+.player-center {
+  min-width: 0;
+}
+
+@media (max-width: 1050px) and (min-width: 801px) {
+  .player-extra {
+    right: 12px !important;
+    gap: 6px !important;
+    padding-inline: 7px !important;
+  }
+}
+
+/* On narrow screens, retain the compact two-row layout. */
+@media (max-width: 800px) {
+  .player-extra {
+    display: none !important;
+  }
+}
+
+/* =========================================
+   NEONWAVE — WARM AMBER COLOUR OVERRIDE
+   Must remain at the VERY END of style.css
+========================================= */
+
+html, body {
+    background-color: #21170f !important;
+    background-image:
+        radial-gradient(
+            ellipse at 12% 10%,
+            rgba(6, 5, 4, 0.24),
+            transparent 45%
+        ),
+        radial-gradient(
+            ellipse at 88% 20%,
+            rgba(52, 39, 21, 0.16),
+            transparent 42%
+        ),
+        radial-gradient(
+            ellipse at 75% 90%,
+            rgba(66, 29, 10, 0.2),
+            transparent 45%
+        ),
+        linear-gradient(
+            135deg,
+            #21170f,
+            #302116 55%,
+            #19130f
+        ) !important;
+}
+
+/* Main glass panels */
+.sidebar,
+.main-panel {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,.075),
+            rgba(255,255,255,.015)
+        ),
+        rgba(39, 29, 23, .66) !important;
+}
+
+/* Cards and smaller glass surfaces */
+.vinyl-feature,
+.now-card,
+.music-tile,
+.collection-card,
+.empty-state,
+.library-track {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.09),
+            rgba(255,255,255,.02)
+        ),
+        rgba(48, 35, 27, .48) !important;
+}
+
+/* Hover effects */
+.music-tile:hover,
+.collection-card:hover {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.13),
+            rgba(255,255,255,.035)
+        ),
+        rgba(75, 48, 30, .55) !important;
+}
+
+/* Bottom music player */
+.player-bar {
+    background:
+        linear-gradient(
+            110deg,
+            rgba(255,255,255,.10),
+            rgba(255,255,255,.025) 55%,
+            rgba(218,151,82,.055)
+        ),
+        rgba(39, 29, 23, .72) !important;
+}
+
+/* Play button */
+.player-buttons .player-play {
+    background: linear-gradient(
+        145deg,
+        #f6dfb9,
+        #d69b50
+    ) !important;
+    color: #382313 !important;
+}
+
+/* Progress bar */
+#progress-fill {
+    background: linear-gradient(
+        90deg,
+        #e8bd80,
+        #cf8739
+    ) !important;
+    box-shadow: 0 0 8px rgba(220,157,83,.25) !important;
+}
+
+/* Cover Flow atmosphere */
+.cover-flow-page {
+    background:
+        radial-gradient(
+            ellipse at 50% 45%,
+            rgba(219,148,79,.14),
+            transparent 48%
+        ),
+        rgba(35, 26, 20, .30) !important;
+}
+
+/* Remove purple tint from player highlights */
+.player-bar::before {
+    background: linear-gradient(
+        100deg,
+        rgba(255,255,255,.08),
+        transparent 40%,
+        rgba(225,163,95,.035)
+    ) !important;
+}
