@@ -3,10 +3,44 @@
 // NEONWAVE - FRONTEND
 // ==========================================
 
+// ==========================================
+// NEONWAVE - Playlist presets
+// ==========================================
+
+const PLAYLIST_GRADIENTS = [
+    "linear-gradient(135deg, #141e30 0%, #243b55 50%, #4b6cb7 100%)",
+    "linear-gradient(135deg, #42275a 0%, #734b6d 50%, #c471ed 100%)",
+    "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
+    "linear-gradient(135deg, #134e5e 0%, #2a9d8f 55%, #71b280 100%)",
+    "linear-gradient(135deg, #360033 0%, #6a0572 50%, #c94b4b 100%)",
+    "linear-gradient(135deg, #232526 0%, #414345 50%, #6b7280 100%)",
+    "linear-gradient(135deg, #1d4350 0%, #a43931 55%, #e76f51 100%)",
+    "linear-gradient(135deg, #20002c 0%, #5b247a 50%, #cbb4d4 100%)",
+    "linear-gradient(135deg, #005c97 0%, #363795 55%, #6dd5ed 100%)",
+    "linear-gradient(135deg, #3a1c71 0%, #d76d77 55%, #ffaf7b 100%)",
+    "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #928dab 100%)",
+    "linear-gradient(135deg, #4b134f 0%, #8e2de2 50%, #c94b4b 100%)",
+    "linear-gradient(135deg, #16222a 0%, #3a6073 55%, #56ccf2 100%)",
+    "linear-gradient(135deg, #3e5151 0%, #decba4 55%, #f5d6a6 100%)",
+    "linear-gradient(135deg, #41295a 0%, #8e44ad 50%, #e056fd 100%)",
+    "linear-gradient(135deg, #1a2a6c 0%, #b21f1f 55%, #fdbb2d 100%)",
+    "linear-gradient(135deg, #283048 0%, #859398 55%, #dce3e8 100%)",
+    "linear-gradient(135deg, #3c1053 0%, #ad5389 55%, #f7b2bd 100%)",
+    "linear-gradient(135deg, #00416a 0%, #799f0c 55%, #ffe000 100%)",
+    "linear-gradient(135deg, #42275a 0%, #f39f86 55%, #f7d794 100%)",
+    "linear-gradient(135deg, #0b486b 0%, #3b8686 55%, #79bd9a 100%)",
+    "linear-gradient(135deg, #614385 0%, #516395 55%, #92a8d1 100%)",
+    "linear-gradient(135deg, #ff512f 0%, #dd2476 55%, #ff9966 100%)",
+    "linear-gradient(135deg, #1f1c2c 0%, #928dab 55%, #c9c6d3 100%)",
+    "linear-gradient(135deg, #355c7d 0%, #6c5b7b 55%, #c06c84 100%)"
+];
+
 
 // ==========================================
-// 1. NAVIGATION
+// 1. NAVIGATION + SECTION THEMES
 // ==========================================
+
+
 
 const navButtons = document.querySelectorAll("[data-page]");
 
@@ -18,25 +52,164 @@ const pageSections = {
     playlist: document.getElementById("page-playlist")
 };
 
-function showPage(pageName) {
+const primaryNav = document.querySelector(".primary-nav");
+let navIndicator = null;
 
-    Object.entries(pageSections).forEach(([name, section]) => {
-        if (section) {
-            section.classList.toggle("hidden", name !== pageName);
-        }
-    });
+// Create one shared sliding navigation indicator
+if (primaryNav) {
+    primaryNav.style.position = "relative";
 
-    document.getElementById("cover-flow").classList.add("hidden");
+    navIndicator = document.createElement("span");
+    navIndicator.className = "nav-active-indicator";
+    navIndicator.setAttribute("aria-hidden", "true");
 
-    document.querySelectorAll(".nav-item").forEach(button => {
-        button.classList.toggle("active", button.dataset.page === pageName);
-    });
+    primaryNav.prepend(navIndicator);
 }
 
-navButtons.forEach(button => {
-    button.addEventListener("click", () => {
-        showPage(button.dataset.page);
+
+// Move indicator directly to selected section
+function moveNavIndicator(pageName) {
+
+    if (!primaryNav || !navIndicator) return;
+
+    const target = primaryNav.querySelector(
+        `.nav-item[data-page="${pageName}"]`
+    );
+
+    if (!target) {
+        navIndicator.classList.add("is-hidden");
+        return;
+    }
+
+    navIndicator.classList.remove("is-hidden");
+
+    navIndicator.style.height = `${target.offsetHeight}px`;
+
+    navIndicator.style.transform =
+        `translateY(${target.offsetTop}px)`;
+}
+
+
+// Generate a unique colour for each playlist
+function setPlaylistTheme(playlist) {
+
+    const name = playlist?.name || "Playlist";
+
+    let hash = 0;
+
+    for (let i = 0; i < name.length; i++) {
+        hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    }
+
+    const hue = hash % 360;
+
+    const accent = `hsl(${hue} 72% 66%)`;
+    const softAccent = `hsla(${hue}, 72%, 66%, .19)`;
+    const glow = `hsla(${hue}, 72%, 60%, .13)`;
+
+    document.documentElement.style.setProperty(
+        "--theme-accent", accent
+    );
+
+    document.documentElement.style.setProperty(
+        "--theme-accent-soft", softAccent
+    );
+
+    document.documentElement.style.setProperty(
+        "--theme-glow", glow
+    );
+
+    document.body.dataset.theme = "playlist";
+}
+
+
+// Change application section
+function showPage(pageName, playlist = null) {
+
+    // Switch content immediately
+    Object.entries(pageSections).forEach(([name, section]) => {
+
+        if (section) {
+            section.classList.toggle(
+                "hidden",
+                name !== pageName
+            );
+        }
+
     });
+
+    document.getElementById("cover-flow")?.classList.add("hidden");
+
+
+    // Update selected navigation item
+    document.querySelectorAll(".nav-item").forEach(button => {
+
+        button.classList.toggle(
+            "active",
+            button.dataset.page === pageName
+        );
+
+    });
+
+
+    // Apply section theme
+    if (["home", "discover", "library", "liked"].includes(pageName)) {
+
+        document.body.dataset.theme = pageName;
+
+        document.documentElement.style.removeProperty("--theme-accent");
+        document.documentElement.style.removeProperty("--theme-accent-soft");
+        document.documentElement.style.removeProperty("--theme-glow");
+
+        moveNavIndicator(pageName);
+
+    }
+
+    // Playlist theme
+    else if (pageName === "playlist" && playlist) {
+
+        setPlaylistTheme(playlist);
+
+        moveNavIndicator(null);
+
+    }
+
+}
+
+
+// Navigation click events
+navButtons.forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        const pageName = button.dataset.page;
+
+        showPage(pageName);
+
+    });
+
+});
+
+
+// Recalculate indicator position on resize
+window.addEventListener("resize", () => {
+
+    const activeButton = document.querySelector(".nav-item.active");
+
+    if (activeButton) {
+        moveNavIndicator(activeButton.dataset.page);
+    }
+
+});
+
+
+// Initial theme
+requestAnimationFrame(() => {
+
+    document.body.dataset.theme = "home";
+
+    moveNavIndicator("home");
+
 });
 
 
@@ -85,6 +258,7 @@ const playlistNav = document.querySelector(".playlist-nav");
 async function loadPlaylists() {
     try {
         const result = await window.pywebview.api.get_playlists();
+        console.log("PLAYLIST API RESPONSE:", result.playlists);
 
         if (!result.success) {
             console.error("Could not load playlists:", result.error);
@@ -99,22 +273,83 @@ async function loadPlaylists() {
         }
 
         result.playlists.forEach(playlist => {
-            const link = document.createElement("button");
+            const link = document.createElement("div");
             link.className = "playlist-link";
             link.dataset.playlistId = playlist.id;
+            link.style.cursor = "pointer";
 
-            // Playlist name section
+            // Playlist information
             const information = document.createElement("span");
             information.className = "playlist-link-info";
 
             const dot = document.createElement("span");
-            dot.className = "playlist-dot dot-gold";
+            dot.className = "playlist-dot";
+
+            let playlistHash = 0;
+
+            for (let i = 0; i < playlist.name.length; i++) {
+                playlistHash =
+                    (playlistHash * 31 + playlist.name.charCodeAt(i)) >>> 0;
+            }
+
+            const playlistHue = playlistHash % 360;
+
+            link.style.setProperty(
+                "--playlist-accent",
+                `hsl(${playlistHue} 72% 66%)`
+            );
+
+            link.style.setProperty(
+                "--playlist-accent-soft",
+                `hsla(${playlistHue}, 72%, 66%, .16)`
+            );
 
             const name = document.createElement("span");
             name.className = "playlist-link-name";
             name.textContent = playlist.name;
 
             information.append(dot, name);
+
+            // Rename button
+            const renameButton = document.createElement("button");
+            renameButton.className = "rename-playlist";
+            renameButton.textContent = "✎";
+            renameButton.title = "Rename playlist";
+
+            renameButton.addEventListener("click", async (event) => {
+                event.stopPropagation();
+
+                const newName = prompt(
+                    "Enter the new playlist name:",
+                    playlist.name
+                );
+
+                if (newName === null || !newName.trim()) return;
+
+                try {
+                    const response = await window.pywebview.api.rename_playlist(
+                        playlist.id,
+                        newName.trim()
+                    );
+
+                    if (response.success) {
+                        await loadPlaylists();
+
+                        if (
+                            currentPlaylist &&
+                            currentPlaylist.id === playlist.id
+                        ) {
+                            currentPlaylist.name = newName.trim();
+                            openPlaylist(currentPlaylist);
+                        }
+                    } else {
+                        alert(response.message || "Could not rename playlist.");
+                    }
+
+                } catch (error) {
+                    console.error("Rename playlist error:", error);
+                }
+            });
 
             // Delete button
             const deleteButton = document.createElement("button");
@@ -155,7 +390,7 @@ async function loadPlaylists() {
                 }
             });
 
-            link.append(information, deleteButton);
+            link.append(information, renameButton, deleteButton);
 
             link.addEventListener("click", () => {
                 showPage("playlist");
@@ -180,6 +415,20 @@ async function openPlaylist(playlist) {
 
     title.textContent = playlist.name;
     description.textContent = "Your personal music collection.";
+
+    // Apply saved playlist background preset
+    const playlistPage = document.getElementById("page-playlist");
+
+    const presetIndex = Number(playlist.background_preset) || 0;
+
+    playlistPage.style.setProperty(
+        "--playlist-background",
+        PLAYLIST_GRADIENTS[presetIndex]
+    );
+    console.log("Playlist:", playlist.name);
+    console.log("Saved preset:", playlist.background_preset);
+    console.log("Selected gradient:", PLAYLIST_GRADIENTS[presetIndex]);
+    console.log("Applied background:", getComputedStyle(playlistPage).backgroundImage);
 
     songCount.textContent = "Loading...";
 
@@ -366,52 +615,310 @@ function displaySongs(songData) {
     songCount.textContent = `${songs.length} songs`;
 
     renderSongs(songs);
-    
+
 }
 
-async function addSongToPlaylist(song) {
 
+
+async function addSongToPlaylist(song) {
     try {
         const result = await window.pywebview.api.get_playlists();
 
-        if (!result.success || result.playlists.length === 0) {
-            alert("Create a playlist first.");
+        if (!result.success) {
+            console.error("Could not load playlists:", result.error);
             return;
         }
 
-        const choices = result.playlists
-            .map((playlist, index) => `${index + 1}. ${playlist.name}`)
-            .join("\n");
+        const playlists = result.playlists;
 
-        const choice = Number(
-            prompt(`Add "${song.title}" to which playlist?\n\n${choices}\n\nEnter playlist number:`)
-        );
+        // BACKGROUND OVERLAY
+        const overlay = document.createElement("div");
+        overlay.className = "playlist-modal-overlay";
 
-        const playlist = result.playlists[choice - 1];
+        // GLASS POPUP
+        const modal = document.createElement("div");
+        modal.className = "playlist-modal";
 
-        if (!playlist) {
-            alert("Invalid playlist selection.");
-            return;
+        Object.assign(modal.style, {
+            width: "100%",
+            maxWidth: "440px",
+            maxHeight: "80vh",
+            overflowY: "auto",
+            padding: "26px",
+            color: "#f1f7f5",
+            fontFamily: "inherit"
+        });
+
+        // HEADER
+        const header = document.createElement("div");
+
+        Object.assign(header.style, {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "8px"
+        });
+
+        const heading = document.createElement("h2");
+        heading.textContent = "Add to playlist";
+
+        Object.assign(heading.style, {
+            margin: "0",
+            fontSize: "21px",
+            fontWeight: "700",
+            color: "#72e4d8"
+        });
+
+        // CLOSE BUTTON
+        const closeButton = document.createElement("button");
+        closeButton.textContent = "×";
+
+        Object.assign(closeButton.style, {
+            width: "34px",
+            height: "34px",
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.2)",
+            background: "rgba(255,255,255,0.08)",
+            color: "white",
+            fontSize: "23px",
+            cursor: "pointer"
+        });
+
+        // CLOSE MODAL
+        let handleEscape;
+
+        const closeModal = () => {
+            overlay.remove();
+            document.removeEventListener("keydown", handleEscape);
+        };
+
+        closeButton.addEventListener("click", closeModal);
+
+        header.append(heading, closeButton);
+
+        // SELECTED SONG INFORMATION
+        const subtitle = document.createElement("p");
+
+        subtitle.textContent =
+            `Choose a playlist for "${song.title || "Unknown Title"}"`;
+
+        Object.assign(subtitle.style, {
+            margin: "0 0 22px",
+            color: "rgba(230,245,242,0.7)",
+            fontSize: "13px",
+            lineHeight: "1.5"
+        });
+
+        // PLAYLIST CONTAINER
+        const playlistList = document.createElement("div");
+
+        Object.assign(playlistList.style, {
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px"
+        });
+
+        // EMPTY PLAYLIST MESSAGE
+        if (playlists.length === 0) {
+            const emptyMessage = document.createElement("p");
+
+            emptyMessage.textContent =
+                "You haven't created any playlists yet.";
+
+            emptyMessage.style.color =
+                "rgba(255,255,255,0.65)";
+
+            playlistList.append(emptyMessage);
         }
 
-        const response = await window.pywebview.api.add_to_playlist(
-            playlist.id,
-            song.id
+        // CREATE PLAYLIST CARDS
+        playlists.forEach((playlist, index) => {
+
+            const playlistButton = document.createElement("button");
+            playlistButton.className = "playlist-option";
+
+            Object.assign(playlistButton.style, {
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: "13px",
+                padding: "13px",
+                borderRadius: "13px",
+                color: "white",
+                textAlign: "left",
+                cursor: "pointer"
+            });
+
+            // PLAYLIST ARTWORK
+            const artwork = document.createElement("div");
+
+            Object.assign(artwork.style, {
+                width: "44px",
+                height: "44px",
+                minWidth: "44px",
+                borderRadius: "10px",
+
+                background: `linear-gradient(135deg,
+                    hsl(${(index * 67 + 170) % 360} 65% 35%),
+                    hsl(${(index * 67 + 210) % 360} 65% 60%))`,
+
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "19px",
+                color: "white"
+            });
+
+            artwork.textContent = "♫";
+
+            // PLAYLIST DETAILS
+            const details = document.createElement("div");
+
+            Object.assign(details.style, {
+                flex: "1",
+                minWidth: "0"
+            });
+
+            const name = document.createElement("strong");
+            name.textContent = playlist.name;
+
+            Object.assign(name.style, {
+                display: "block",
+                fontSize: "14px"
+            });
+
+            const count = document.createElement("span");
+
+            count.textContent = `${playlist.song_count} songs`;
+
+            Object.assign(count.style, {
+                display: "block",
+                marginTop: "4px",
+                fontSize: "12px",
+                color: "rgba(255,255,255,0.6)"
+            });
+
+            details.append(name, count);
+
+            // ARROW
+            const arrow = document.createElement("span");
+
+            arrow.textContent = "›";
+
+            Object.assign(arrow.style, {
+                fontSize: "23px",
+                color: "#72e4d8"
+            });
+
+            playlistButton.append(
+                artwork,
+                details,
+                arrow
+            );
+
+            // ADD SONG TO PLAYLIST
+            playlistButton.addEventListener("click", async () => {
+
+                playlistButton.disabled = true;
+                name.textContent = "Adding...";
+
+                try {
+                    const response =
+                        await window.pywebview.api.add_to_playlist(
+                            playlist.id,
+                            song.id
+                        );
+
+                    if (!response.success) {
+                        throw new Error(
+                            response.message || "Could not add song."
+                        );
+                    }
+
+                    closeModal();
+
+                    // Refresh currently opened playlist
+                    if (
+                        currentPlaylist &&
+                        currentPlaylist.id === playlist.id
+                    ) {
+                        await openPlaylist(currentPlaylist);
+                    }
+
+                    // Refresh sidebar playlist counts
+                    await loadPlaylists();
+
+                    // SUCCESS TOAST
+                    const toast = document.createElement("div");
+
+                    toast.textContent =
+                        `✓ Added to ${playlist.name}`;
+
+                    Object.assign(toast.style, {
+                        position: "fixed",
+                        bottom: "100px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: "10000",
+                        padding: "13px 22px",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(100,220,205,0.35)",
+                        background: "rgba(24,58,57,0.92)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        color: "#8ff0df",
+                        boxShadow: "0 10px 35px rgba(0,0,0,0.3)",
+                        fontSize: "13px"
+                    });
+
+                    document.body.append(toast);
+
+                    setTimeout(() => toast.remove(), 2500);
+
+                } catch (error) {
+                    console.error("Add to playlist error:", error);
+
+                    name.textContent = playlist.name;
+                    playlistButton.disabled = false;
+                }
+            });
+
+            playlistList.append(playlistButton);
+        });
+
+        // ASSEMBLE POPUP
+        modal.append(
+            header,
+            subtitle,
+            playlistList
         );
 
-        if (response.success) {
-            await loadPlaylists();
+        overlay.append(modal);
+        document.body.append(overlay);
 
-            if (currentPlaylist && currentPlaylist.id === playlist.id) {
-                await openPlaylist(currentPlaylist);
+        // CLOSE WHEN CLICKING OUTSIDE
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) {
+                closeModal();
             }
+        });
 
-            alert(`Added to ${playlist.name}`);
-        }
+        // CLOSE WITH ESCAPE
+        handleEscape = (event) => {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        };
+
+        document.addEventListener("keydown", handleEscape);
+
     } catch (error) {
-        console.error("Add to playlist error:", error);
+        console.error("Playlist popup error:", error);
     }
 }
+
+
+
 
 function renderSongs(songData) {
 
@@ -430,25 +937,62 @@ function renderSongs(songData) {
         const row = document.createElement("div");
         row.className = "library-track";
 
+        Object.assign(row.style, {
+            display: "grid",
+            gridTemplateColumns: "28px 42px minmax(160px, 1.7fr) minmax(90px, 1fr) 48px 34px",
+            alignItems: "center",
+            gap: "14px",
+            padding: "12px 16px",
+            minHeight: "68px",
+            boxSizing: "border-box",
+            position: "relative"
+        });
+
         // Track number
         const number = document.createElement("span");
         number.className = "track-number";
         number.textContent = index + 1;
+        number.style.textAlign = "center";
 
         // Cover
         const cover = document.createElement("div");
         cover.className = "track-cover";
         cover.textContent = "♫";
 
+        Object.assign(cover.style, {
+            width: "42px",
+            height: "42px",
+            minWidth: "42px"
+        });
+
         // Track information
         const information = document.createElement("div");
         information.className = "track-information";
 
+        Object.assign(information.style, {
+            minWidth: "0",
+            overflow: "hidden"
+        });
+
         const title = document.createElement("strong");
         title.textContent = song.title || "Unknown Title";
 
+        Object.assign(title.style, {
+            display: "block",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+        });
+
         const artist = document.createElement("span");
         artist.textContent = song.artist || "Unknown Artist";
+
+        Object.assign(artist.style, {
+            display: "block",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+        });
 
         information.append(title, artist);
 
@@ -457,55 +1001,65 @@ function renderSongs(songData) {
         album.className = "track-album";
         album.textContent = song.album || "Unknown Album";
 
+        Object.assign(album.style, {
+            minWidth: "0",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+        });
+
         // Duration
         const duration = document.createElement("span");
         duration.className = "track-duration";
         duration.textContent = song.duration || "--:--";
 
-        // Add to playlist button
-        const addButton = document.createElement("button");
+        Object.assign(duration.style, {
+            textAlign: "right",
+            whiteSpace: "nowrap"
+        });
 
-        addButton.className = "add-to-playlist";
-        addButton.textContent = "+";
-        addButton.title = "Add to playlist";
+        // Three-dot menu
+        const menuButton = document.createElement("button");
 
-        addButton.style.cssText = `
-            appearance: none;
-            -webkit-appearance: none;
-            width: 32px;
-            height: 32px;
-            min-width: 32px;
-            padding: 0;
-            margin-left: auto;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-            color: white;
-            font-size: 22px;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: none;
-        `;
+        menuButton.className = "track-menu-button";
+        menuButton.textContent = "⋯";
+        menuButton.title = "More options";
 
-        addButton.addEventListener("click", (event) => {
+        Object.assign(menuButton.style, {
+            position: "static",
+            width: "32px",
+            height: "32px",
+            minWidth: "32px",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.07)",
+            color: "white",
+            fontSize: "22px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            opacity: "0.65",
+            padding: "0",
+            justifySelf: "end"
+        });
+
+        menuButton.addEventListener("click", (event) => {
             event.stopPropagation();
             addSongToPlaylist(song);
         });
 
-        // Add all elements to the row
+        // Assemble row
         row.append(
             number,
             cover,
             information,
             album,
             duration,
-            addButton
+            menuButton
         );
 
-        // Play song when clicking the row
+        // Play song
         row.addEventListener("click", () => {
             playSong(song);
         });
@@ -513,47 +1067,8 @@ function renderSongs(songData) {
         songList.append(row);
     });
 }
-async function addSongToPlaylist(song) {
 
-    try {
-        const result = await window.pywebview.api.get_playlists();
 
-        if (!result.success || result.playlists.length === 0) {
-            alert("Create a playlist first.");
-            return;
-        }
-
-        const choices = result.playlists
-            .map((playlist, index) => `${index + 1}. ${playlist.name}`)
-            .join("\n");
-
-        const choice = Number(
-            prompt(`Add "${song.title}" to which playlist?\n\n${choices}\n\nEnter playlist number:`)
-        );
-
-        const playlist = result.playlists[choice - 1];
-
-        if (!playlist) {
-            alert("Invalid playlist selection.");
-            return;
-        }
-
-        const response = await window.pywebview.api.add_to_playlist(
-            playlist.id,
-            song.id
-        );
-
-        if (response.success) {
-            alert(`Added to ${playlist.name}`);
-            await loadPlaylists();
-        } else {
-            alert(response.message || "Could not add song.");
-        }
-
-    } catch (error) {
-        console.error("Add to playlist error:", error);
-    }
-}
 
 // ==========================================
 // LIBRARY SEARCH

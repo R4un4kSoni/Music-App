@@ -1,4 +1,5 @@
 from backend.database import get_connection
+import random
 
 
 def create_playlist(name):
@@ -7,13 +8,15 @@ def create_playlist(name):
     if not name:
         return None
 
+    background_preset = random.randint(0, 24)
+
     connection = get_connection()
     cursor = connection.cursor()
 
-    cursor.execute(
-        "INSERT INTO playlists (name) VALUES (?)",
-        (name,)
-    )
+    cursor.execute("""
+        INSERT INTO playlists (name, background_preset)
+        VALUES (?, ?)
+    """, (name, background_preset))
 
     playlist_id = cursor.lastrowid
 
@@ -23,26 +26,34 @@ def create_playlist(name):
     return playlist_id
 
 
+
 def get_all_playlists():
     connection = get_connection()
     cursor = connection.cursor()
 
-    cursor.execute("""
-        SELECT
-            playlists.id,
-            playlists.name,
-            COUNT(playlist_songs.song_id) AS song_count
-        FROM playlists
-        LEFT JOIN playlist_songs
-            ON playlists.id = playlist_songs.playlist_id
-        GROUP BY playlists.id
-        ORDER BY playlists.id DESC
-    """)
+    try:
+        cursor.execute("""
+            SELECT
+                playlists.id,
+                playlists.name,
+                playlists.background_preset,
+                COUNT(playlist_songs.song_id) AS song_count
+            FROM playlists
+            LEFT JOIN playlist_songs
+                ON playlists.id = playlist_songs.playlist_id
+            GROUP BY playlists.id
+            ORDER BY playlists.id DESC
+        """)
 
-    playlists = [dict(row) for row in cursor.fetchall()]
-    connection.close()
+        playlists = [dict(row) for row in cursor.fetchall()]
 
-    return playlists
+        print("PLAYLIST DATABASE RESULT:", playlists)
+
+        return playlists
+
+    finally:
+        connection.close()
+
 
 
 def add_song_to_playlist(playlist_id, song_id):
@@ -117,6 +128,28 @@ def delete_playlist(playlist_id):
     except Exception:
         connection.rollback()
         raise
+
+    finally:
+        connection.close()
+
+def rename_playlist(playlist_id, new_name):
+    new_name = new_name.strip()
+
+    if not new_name:
+        return False
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            UPDATE playlists
+            SET name = ?
+            WHERE id = ?
+        """, (new_name, playlist_id))
+
+        connection.commit()
+        return cursor.rowcount > 0
 
     finally:
         connection.close()

@@ -3,7 +3,7 @@ from backend.player import MusicPlayer
 from backend.database import (
     create_tables,
     save_songs,
-    get_all_songs
+    get_all_songs,
 )
 from backend.playlist import (
     create_playlist as db_create_playlist,
@@ -11,7 +11,8 @@ from backend.playlist import (
     add_song_to_playlist,
     get_playlist_songs,
     remove_song_from_playlist,
-    delete_playlist
+    delete_playlist,
+    rename_playlist as db_rename_playlist
 )
 
 class NeonWaveAPI:
@@ -196,6 +197,27 @@ class NeonWaveAPI:
             return {
                 "success": False,
                 "message": "Playlist not found."
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "message": str(error)
+            }
+
+    def rename_playlist(self, playlist_id, new_name):
+        try:
+            renamed = db_rename_playlist(playlist_id, new_name)
+
+            if renamed:
+                return {
+                    "success": True,
+                    "message": "Playlist renamed successfully."
+                }
+
+            return {
+                "success": False,
+                "message": "Invalid playlist or empty name."
             }
 
         except Exception as error:
