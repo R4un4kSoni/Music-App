@@ -153,3 +153,115 @@ def rename_playlist(playlist_id, new_name):
 
     finally:
         connection.close()
+
+# ==========================================
+# LIKED SONGS
+# ==========================================
+
+LIKED_PLAYLIST_NAME = "Liked Songs"
+
+
+def get_or_create_liked_playlist():
+    """Return the special Liked Songs playlist, creating it if necessary."""
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT id
+            FROM playlists
+            WHERE name = ?
+            ORDER BY id ASC
+            LIMIT 1
+        """, (LIKED_PLAYLIST_NAME,))
+
+        playlist = cursor.fetchone()
+
+        if playlist:
+            return playlist["id"]
+
+        cursor.execute("""
+            INSERT INTO playlists (name, background_preset)
+            VALUES (?, ?)
+        """, (LIKED_PLAYLIST_NAME, 0))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    finally:
+        connection.close()
+
+
+def get_liked_song_ids():
+    """Return IDs of all songs in the Liked Songs playlist."""
+
+    playlist_id = get_or_create_liked_playlist()
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT song_id
+            FROM playlist_songs
+            WHERE playlist_id = ?
+        """, (playlist_id,))
+
+        return [row["song_id"] for row in cursor.fetchall()]
+
+    finally:
+        connection.close()
+
+
+def toggle_like_song(song_id):
+    """Add a song to Liked Songs, or remove it if already liked."""
+
+    playlist_id = get_or_create_liked_playlist()
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT id
+            FROM playlist_songs
+            WHERE playlist_id = ? AND song_id = ?
+        """, (playlist_id, song_id))
+
+        existing = cursor.fetchone()
+
+        if existing:
+            cursor.execute("""
+                DELETE FROM playlist_songs
+                WHERE playlist_id = ? AND song_id = ?
+            """, (playlist_id, song_id))
+
+            liked = False
+            message = "Removed from Liked Songs."
+
+        else:
+            cursor.execute("""
+                INSERT OR IGNORE INTO playlist_songs
+                (playlist_id, song_id)
+                VALUES (?, ?)
+            """, (playlist_id, song_id))
+
+            liked = True
+            message = "Added to Liked Songs."
+
+        connection.commit()
+
+        return {
+            "success": True,
+            "liked": liked,
+            "message": message,
+            "playlist_id": playlist_id
+        }
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()

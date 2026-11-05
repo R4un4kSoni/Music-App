@@ -12,7 +12,9 @@ from backend.playlist import (
     get_playlist_songs,
     remove_song_from_playlist,
     delete_playlist,
-    rename_playlist as db_rename_playlist
+    rename_playlist as db_rename_playlist,
+    get_liked_song_ids,
+    toggle_like_song,
 )
 
 class NeonWaveAPI:
@@ -223,5 +225,35 @@ class NeonWaveAPI:
         except Exception as error:
             return {
                 "success": False,
+                "message": str(error)
+            }
+
+    def get_liked_song_ids(self):
+        try:
+            song_ids = get_liked_song_ids()
+
+            return {
+                "success": True,
+                "song_ids": song_ids
+            }
+
+        except Exception as error:
+            return {
+                "success": False,
+                "song_ids": [],
+                "error": str(error)
+            }
+
+
+    def toggle_like_song(self, song_id):
+        try:
+            result = toggle_like_song(int(song_id))
+
+            return result
+
+        except Exception as error:
+            return {
+                "success": False,
+                "liked": False,
                 "message": str(error)
             }

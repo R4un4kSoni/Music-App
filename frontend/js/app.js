@@ -37,6 +37,211 @@ const PLAYLIST_GRADIENTS = [
 
 
 // ==========================================
+// NEONWAVE - TOAST NOTIFICATIONS
+// ==========================================
+
+function showToast(message, type = "success", duration = 2500) {
+
+    const toast = document.createElement("div");
+    toast.className = `neon-toast neon-toast-${type}`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add("show");
+    });
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+
+// ==========================================
+// NEONWAVE - LIKED SONGS
+// ==========================================
+
+let likedSongIds = new Set();
+let likedSongsLoading = null;
+
+
+// Load saved liked songs from SQLite
+async function loadLikedSongIds() {
+
+    if (likedSongsLoading) {
+        return likedSongsLoading;
+    }
+
+    likedSongsLoading = (async () => {
+
+        try {
+            const result = await window.pywebview.api.get_liked_song_ids();
+
+            if (!result.success) {
+                throw new Error(result.error || "Could not load liked songs.");
+            }
+
+            likedSongIds = new Set(
+                result.song_ids.map(Number)
+            );
+
+            updateLikeButtons();
+
+        } catch (error) {
+            console.error("Liked songs loading error:", error);
+
+        } finally {
+            likedSongsLoading = null;
+        }
+
+    })();
+
+    return likedSongsLoading;
+}
+
+
+// Update visible heart buttons
+function updateLikeButtons() {
+
+    document.querySelectorAll(".track-like-button").forEach(button => {
+
+        const songId = Number(button.dataset.songId);
+        const liked = likedSongIds.has(songId);
+
+        button.textContent = liked ? "♥" : "+";
+        button.classList.toggle("is-liked", liked);
+
+        button.title = liked
+            ? "Remove from Liked Songs"
+            : "Add to Liked Songs";
+
+        button.setAttribute("aria-label", button.title);
+    });
+}
+
+
+// Notification
+function showLikeToast(message) {
+
+    let container = document.querySelector(".like-toast-container");
+
+    if (!container) {
+
+        container = document.createElement("div");
+        container.className = "like-toast-container";
+
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    toast.className = "like-toast";
+
+    const heart = document.createElement("span");
+    heart.className = "toast-heart";
+    heart.textContent = "♥";
+
+    const text = document.createElement("span");
+    text.textContent = message;
+
+    toast.append(heart, text);
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add("show");
+    });
+
+    setTimeout(() => {
+
+        toast.classList.remove("show");
+
+        setTimeout(() => toast.remove(), 300);
+
+    }, 2200);
+}
+
+
+// Add or remove a liked song
+async function handleLikeClick(song, button) {
+
+    if (!song.id) {
+        console.error("Cannot like song: song ID is missing.", song);
+        showLikeToast("Unable to like this song");
+        return;
+    }
+
+    if (button.disabled) return;
+
+    button.disabled = true;
+
+    try {
+
+        const result = await window.pywebview.api.toggle_like_song(song.id);
+
+        if (!result.success) {
+            throw new Error(result.message || "Could not update liked songs.");
+        }
+
+        const songId = Number(song.id);
+
+        if (result.liked) {
+
+            likedSongIds.add(songId);
+
+            button.classList.add("like-sparkle");
+
+            showLikeToast("Added to Liked Songs");
+
+            // Remove the sparkle animation class after it finishes
+            setTimeout(() => {
+                button.classList.remove("like-sparkle");
+            }, 650);
+
+        } else {
+
+            likedSongIds.delete(songId);
+
+            showLikeToast("Removed from Liked Songs");
+        }
+
+        updateLikeButtons();
+
+        // Refresh playlist sidebar so its song count updates
+        if (typeof loadPlaylists === "function") {
+            await loadPlaylists();
+        }
+
+        // Refresh the Liked Songs page if it is currently open
+        const likedPage = document.getElementById("page-liked");
+
+        if (likedPage && !likedPage.classList.contains("hidden")) {
+            await loadLikedSongsPage();
+        }
+
+        // Refresh currently open Liked Songs playlist
+        if (
+            typeof currentPlaylist !== "undefined" &&
+            currentPlaylist &&
+            currentPlaylist.name === "Liked Songs"
+        ) {
+            await openPlaylist(currentPlaylist);
+        }
+
+    } catch (error) {
+
+        console.error("Like song error:", error);
+        showLikeToast("Could not update Liked Songs");
+
+    } finally {
+
+        button.disabled = false;
+    }
+}
+
+
+// ==========================================
 // 1. NAVIGATION + SECTION THEMES
 // ==========================================
 
@@ -253,12 +458,301 @@ document.querySelectorAll(".heart-button").forEach(button => {
 // 4. PLAYLIST MANAGEMENT
 // ==========================================
 
+async function openRenamePlaylistModal(playlist) {
+
+    // Prevent multiple modals
+    if (document.querySelector(".rename-playlist-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "playlist-modal-overlay rename-playlist-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "playlist-modal";
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "glass-modal-header";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Rename Playlist";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "glass-modal-close";
+    closeButton.textContent = "×";
+    closeButton.type = "button";
+
+    header.append(heading, closeButton);
+
+    // Description
+    const description = document.createElement("p");
+    description.className = "glass-modal-description";
+    description.textContent = "Choose a new name for your playlist.";
+
+    // Input
+    const input = document.createElement("input");
+    input.className = "glass-modal-input";
+    input.type = "text";
+    input.value = playlist.name;
+    input.maxLength = 60;
+
+    // Error message
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "glass-modal-error";
+
+    // Actions
+    const actions = document.createElement("div");
+    actions.className = "glass-modal-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "glass-modal-button";
+    cancelButton.textContent = "Cancel";
+    cancelButton.type = "button";
+
+    const saveButton = document.createElement("button");
+    saveButton.className = "glass-modal-button primary";
+    saveButton.textContent = "Save Changes";
+    saveButton.type = "button";
+
+    actions.append(cancelButton, saveButton);
+
+    // Close modal
+    let handleEscape;
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener("keydown", handleEscape);
+    }
+
+    closeButton.addEventListener("click", closeModal);
+    cancelButton.addEventListener("click", closeModal);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closeModal();
+    });
+
+    handleEscape = (event) => {
+        if (event.key === "Escape") closeModal();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    // Save renamed playlist
+    async function savePlaylistName() {
+
+        const newName = input.value.trim();
+
+        if (!newName) {
+            errorMessage.textContent = "Please enter a playlist name.";
+            input.focus();
+            return;
+        }
+
+        if (newName === playlist.name) {
+            closeModal();
+            return;
+        }
+
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+        errorMessage.textContent = "";
+
+        try {
+            const response = await window.pywebview.api.rename_playlist(
+                playlist.id,
+                newName
+            );
+
+            if (!response.success) {
+                throw new Error(
+                    response.message || "Could not rename playlist."
+                );
+            }
+
+            // Update currently open playlist
+            if (
+                currentPlaylist &&
+                currentPlaylist.id === playlist.id
+            ) {
+                currentPlaylist.name = newName;
+            }
+
+            closeModal();
+
+            await loadPlaylists();
+
+            if (
+                currentPlaylist &&
+                currentPlaylist.id === playlist.id
+            ) {
+                openPlaylist(currentPlaylist);
+            }
+
+        } catch (error) {
+            console.error("Rename playlist error:", error);
+
+            errorMessage.textContent = error.message;
+            saveButton.disabled = false;
+            saveButton.textContent = "Save Changes";
+        }
+    }
+
+    saveButton.addEventListener("click", savePlaylistName);
+
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") savePlaylistName();
+    });
+
+    // Assemble modal
+    modal.append(
+        header,
+        description,
+        input,
+        errorMessage,
+        actions
+    );
+
+    overlay.append(modal);
+    document.body.append(overlay);
+
+    requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+    });
+}
+
+async function openDeletePlaylistModal(playlist) {
+
+    // Prevent multiple modals
+    if (document.querySelector(".delete-playlist-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "playlist-modal-overlay delete-playlist-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "playlist-modal";
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "glass-modal-header";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Delete Playlist";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "glass-modal-close";
+    closeButton.textContent = "×";
+    closeButton.type = "button";
+
+    header.append(heading, closeButton);
+
+    // Description
+    const description = document.createElement("p");
+    description.className = "glass-modal-description";
+    description.textContent =
+        `Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`;
+
+    // Error message
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "glass-modal-error";
+
+    // Actions
+    const actions = document.createElement("div");
+    actions.className = "glass-modal-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "glass-modal-button";
+    cancelButton.textContent = "Cancel";
+    cancelButton.type = "button";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "glass-modal-button danger";
+    deleteButton.textContent = "Delete Playlist";
+    deleteButton.type = "button";
+
+    actions.append(cancelButton, deleteButton);
+
+    // Close modal
+    let handleEscape;
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener("keydown", handleEscape);
+    }
+
+    closeButton.addEventListener("click", closeModal);
+    cancelButton.addEventListener("click", closeModal);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closeModal();
+    });
+
+    handleEscape = (event) => {
+        if (event.key === "Escape") closeModal();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    // Delete playlist
+    async function confirmDelete() {
+
+        deleteButton.disabled = true;
+        deleteButton.textContent = "Deleting...";
+        errorMessage.textContent = "";
+
+        try {
+            const response = await window.pywebview.api.delete_playlist(
+                playlist.id
+            );
+
+            if (!response.success) {
+                throw new Error(
+                    response.message || "Could not delete playlist."
+                );
+            }
+
+            // Return home if the deleted playlist was open
+            if (
+                currentPlaylist &&
+                currentPlaylist.id === playlist.id
+            ) {
+                currentPlaylist = null;
+                showPage("home");
+            }
+
+            closeModal();
+
+            await loadPlaylists();
+
+        } catch (error) {
+            console.error("Delete playlist error:", error);
+
+            errorMessage.textContent = error.message;
+            deleteButton.disabled = false;
+            deleteButton.textContent = "Delete Playlist";
+        }
+    }
+
+    deleteButton.addEventListener("click", confirmDelete);
+
+    // Assemble modal
+    modal.append(
+        header,
+        description,
+        errorMessage,
+        actions
+    );
+
+    overlay.append(modal);
+    document.body.append(overlay);
+}
+
 const playlistNav = document.querySelector(".playlist-nav");
+
+
 
 async function loadPlaylists() {
     try {
         const result = await window.pywebview.api.get_playlists();
-        console.log("PLAYLIST API RESPONSE:", result.playlists);
 
         if (!result.success) {
             console.error("Could not load playlists:", result.error);
@@ -267,18 +761,22 @@ async function loadPlaylists() {
 
         playlistNav.innerHTML = "";
 
-        if (result.playlists.length === 0) {
+        // Hide the built-in Liked Songs collection.
+        const userPlaylists = result.playlists.filter(
+            playlist => playlist.name !== "Liked Songs"
+        );
+
+        if (userPlaylists.length === 0) {
             playlistNav.textContent = "No playlists yet";
             return;
         }
 
-        result.playlists.forEach(playlist => {
+        userPlaylists.forEach(playlist => {
             const link = document.createElement("div");
             link.className = "playlist-link";
             link.dataset.playlistId = playlist.id;
             link.style.cursor = "pointer";
 
-            // Playlist information
             const information = document.createElement("span");
             information.className = "playlist-link-info";
 
@@ -310,84 +808,24 @@ async function loadPlaylists() {
 
             information.append(dot, name);
 
-            // Rename button
             const renameButton = document.createElement("button");
             renameButton.className = "rename-playlist";
             renameButton.textContent = "✎";
             renameButton.title = "Rename playlist";
 
-            renameButton.addEventListener("click", async (event) => {
+            renameButton.addEventListener("click", event => {
                 event.stopPropagation();
-
-                const newName = prompt(
-                    "Enter the new playlist name:",
-                    playlist.name
-                );
-
-                if (newName === null || !newName.trim()) return;
-
-                try {
-                    const response = await window.pywebview.api.rename_playlist(
-                        playlist.id,
-                        newName.trim()
-                    );
-
-                    if (response.success) {
-                        await loadPlaylists();
-
-                        if (
-                            currentPlaylist &&
-                            currentPlaylist.id === playlist.id
-                        ) {
-                            currentPlaylist.name = newName.trim();
-                            openPlaylist(currentPlaylist);
-                        }
-                    } else {
-                        alert(response.message || "Could not rename playlist.");
-                    }
-
-                } catch (error) {
-                    console.error("Rename playlist error:", error);
-                }
+                openRenamePlaylistModal(playlist);
             });
 
-            // Delete button
             const deleteButton = document.createElement("button");
             deleteButton.className = "delete-playlist";
             deleteButton.textContent = "×";
             deleteButton.title = "Delete playlist";
 
-            deleteButton.addEventListener("click", async (event) => {
+            deleteButton.addEventListener("click", event => {
                 event.stopPropagation();
-
-                const confirmed = confirm(
-                    `Delete playlist "${playlist.name}"?`
-                );
-
-                if (!confirmed) return;
-
-                try {
-                    const response = await window.pywebview.api.delete_playlist(
-                        playlist.id
-                    );
-
-                    if (response.success) {
-                        if (
-                            currentPlaylist &&
-                            currentPlaylist.id === playlist.id
-                        ) {
-                            currentPlaylist = null;
-                            showPage("home");
-                        }
-
-                        await loadPlaylists();
-                    } else {
-                        alert(response.message || "Could not delete playlist.");
-                    }
-
-                } catch (error) {
-                    console.error("Delete playlist error:", error);
-                }
+                openDeletePlaylistModal(playlist);
             });
 
             link.append(information, renameButton, deleteButton);
@@ -404,6 +842,126 @@ async function loadPlaylists() {
         console.error("Playlist loading error:", error);
     }
 }
+
+
+async function openRemoveSongModal(playlist, song) {
+
+    // Prevent multiple modals
+    if (document.querySelector(".remove-song-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "playlist-modal-overlay remove-song-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "playlist-modal";
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "glass-modal-header";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Remove Song";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "glass-modal-close";
+    closeButton.textContent = "×";
+    closeButton.type = "button";
+
+    header.append(heading, closeButton);
+
+    // Description
+    const description = document.createElement("p");
+    description.className = "glass-modal-description";
+    description.textContent =
+        `Remove "${song.title || "Unknown Title"}" from "${playlist.name}"?`;
+
+    // Error message
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "glass-modal-error";
+
+    // Actions
+    const actions = document.createElement("div");
+    actions.className = "glass-modal-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "glass-modal-button";
+    cancelButton.textContent = "Cancel";
+    cancelButton.type = "button";
+
+    const removeButton = document.createElement("button");
+    removeButton.className = "glass-modal-button danger";
+    removeButton.textContent = "Remove Song";
+    removeButton.type = "button";
+
+    actions.append(cancelButton, removeButton);
+
+    // Close modal
+    let handleEscape;
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener("keydown", handleEscape);
+    }
+
+    closeButton.addEventListener("click", closeModal);
+    cancelButton.addEventListener("click", closeModal);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closeModal();
+    });
+
+    handleEscape = (event) => {
+        if (event.key === "Escape") closeModal();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    // Remove song
+    async function confirmRemove() {
+
+        removeButton.disabled = true;
+        removeButton.textContent = "Removing...";
+        errorMessage.textContent = "";
+
+        try {
+            const response = await window.pywebview.api.remove_from_playlist(
+                playlist.id,
+                song.id
+            );
+
+            if (!response.success) {
+                throw new Error(
+                    response.message || "Could not remove song."
+                );
+            }
+
+            closeModal();
+
+            await openPlaylist(playlist);
+
+        } catch (error) {
+            console.error("Remove song error:", error);
+
+            errorMessage.textContent = error.message;
+            removeButton.disabled = false;
+            removeButton.textContent = "Remove Song";
+        }
+    }
+
+    removeButton.addEventListener("click", confirmRemove);
+
+    // Assemble modal
+    modal.append(
+        header,
+        description,
+        errorMessage,
+        actions
+    );
+
+    overlay.append(modal);
+    document.body.append(overlay);
+}
+
 async function openPlaylist(playlist) {
 
     currentPlaylist = playlist
@@ -498,30 +1056,9 @@ async function openPlaylist(playlist) {
             removeButton.textContent = "×";
             removeButton.title = "Remove from playlist";
 
-            removeButton.addEventListener("click", async (event) => {
+            removeButton.addEventListener("click", (event) => {
                 event.stopPropagation();
-
-                const confirmed = confirm(
-                    `Remove "${song.title}" from this playlist?`
-                );
-
-                if (!confirmed) return;
-
-                try {
-                    const response = await window.pywebview.api.remove_from_playlist(
-                        playlist.id,
-                        song.id
-                    );
-
-                    if (response.success) {
-                        await openPlaylist(playlist);
-                    } else {
-                        alert(response.message || "Could not remove song.");
-                    }
-
-                } catch (error) {
-                    console.error("Remove song error:", error);
-                }
+                openRemoveSongModal(playlist, song);
             });
 
             row.append(removeButton);
@@ -537,25 +1074,143 @@ async function openPlaylist(playlist) {
     }
 }
 
+
 async function createNewPlaylist() {
-    const name = window.prompt("Name your playlist:");
 
-    if (!name || !name.trim()) return;
+    // Prevent multiple modals
+    if (document.querySelector(".create-playlist-overlay")) return;
 
-    try {
-        const result = await window.pywebview.api.create_playlist(name.trim());
+    // Overlay
+    const overlay = document.createElement("div");
+    overlay.className = "playlist-modal-overlay create-playlist-overlay";
 
-        if (!result.success) {
-            alert(result.message);
+    // Modal
+    const modal = document.createElement("div");
+    modal.className = "playlist-modal";
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "glass-modal-header";
+
+    const heading = document.createElement("h2");
+    heading.textContent = "Create Playlist";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "glass-modal-close";
+    closeButton.textContent = "×";
+    closeButton.type = "button";
+
+    header.append(heading, closeButton);
+
+    // Description
+    const description = document.createElement("p");
+    description.className = "glass-modal-description";
+    description.textContent = "Give your new playlist a name.";
+
+    // Input
+    const input = document.createElement("input");
+    input.className = "glass-modal-input";
+    input.type = "text";
+    input.placeholder = "Enter playlist name...";
+    input.maxLength = 60;
+
+    // Error message
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "glass-modal-error";
+
+    // Buttons
+    const actions = document.createElement("div");
+    actions.className = "glass-modal-actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "glass-modal-button";
+    cancelButton.textContent = "Cancel";
+    cancelButton.type = "button";
+
+    const createButton = document.createElement("button");
+    createButton.className = "glass-modal-button primary";
+    createButton.textContent = "Create Playlist";
+    createButton.type = "button";
+
+    actions.append(cancelButton, createButton);
+
+    // Close modal
+    let handleEscape;
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener("keydown", handleEscape);
+    }
+
+    closeButton.addEventListener("click", closeModal);
+    cancelButton.addEventListener("click", closeModal);
+
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) closeModal();
+    });
+
+    handleEscape = (event) => {
+        if (event.key === "Escape") closeModal();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    // Create playlist
+    async function submitPlaylist() {
+
+        const name = input.value.trim();
+
+        if (!name) {
+            errorMessage.textContent = "Please enter a playlist name.";
+            input.focus();
             return;
         }
 
-        await loadPlaylists();
+        createButton.disabled = true;
+        createButton.textContent = "Creating...";
+        errorMessage.textContent = "";
 
-    } catch (error) {
-        console.error("Playlist creation error:", error);
+        try {
+            const result = await window.pywebview.api.create_playlist(name);
+
+            if (!result.success) {
+                throw new Error(result.message || "Could not create playlist.");
+            }
+
+            closeModal();
+            await loadPlaylists();
+
+        } catch (error) {
+            console.error("Playlist creation error:", error);
+
+            errorMessage.textContent = error.message;
+            createButton.disabled = false;
+            createButton.textContent = "Create Playlist";
+        }
     }
+
+    createButton.addEventListener("click", submitPlaylist);
+
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") submitPlaylist();
+    });
+
+    // Assemble modal
+    modal.append(
+        header,
+        description,
+        input,
+        errorMessage,
+        actions
+    );
+
+    overlay.append(modal);
+    document.body.append(overlay);
+
+    // Focus input
+    requestAnimationFrame(() => input.focus());
 }
+
 
 
 document.getElementById("create-playlist")
@@ -629,7 +1284,9 @@ async function addSongToPlaylist(song) {
             return;
         }
 
-        const playlists = result.playlists;
+        const playlists = result.playlists.filter(
+            playlist => playlist.name !== "Liked Songs"
+        );
 
         // BACKGROUND OVERLAY
         const overlay = document.createElement("div");
@@ -849,34 +1506,12 @@ async function addSongToPlaylist(song) {
                     await loadPlaylists();
 
                     // SUCCESS TOAST
-                    const toast = document.createElement("div");
-
-                    toast.textContent =
-                        `✓ Added to ${playlist.name}`;
-
-                    Object.assign(toast.style, {
-                        position: "fixed",
-                        bottom: "100px",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        zIndex: "10000",
-                        padding: "13px 22px",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(100,220,205,0.35)",
-                        background: "rgba(24,58,57,0.92)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        color: "#8ff0df",
-                        boxShadow: "0 10px 35px rgba(0,0,0,0.3)",
-                        fontSize: "13px"
-                    });
-
-                    document.body.append(toast);
-
-                    setTimeout(() => toast.remove(), 2500);
+                    showToast(`✓ Added to ${playlist.name}`, "success");
 
                 } catch (error) {
                     console.error("Add to playlist error:", error);
+
+                    showToast(error.message || "Could not add song.", "error");
 
                     name.textContent = playlist.name;
                     playlistButton.disabled = false;
@@ -920,9 +1555,9 @@ async function addSongToPlaylist(song) {
 
 
 
-function renderSongs(songData) {
+function renderSongs(songData, targetList = songList) {
 
-    songList.innerHTML = "";
+    targetList.innerHTML = "";
 
     if (songData.length === 0) {
         showLibraryMessage(
@@ -939,7 +1574,8 @@ function renderSongs(songData) {
 
         Object.assign(row.style, {
             display: "grid",
-            gridTemplateColumns: "28px 42px minmax(160px, 1.7fr) minmax(90px, 1fr) 48px 34px",
+            gridTemplateColumns:
+                "28px 42px minmax(160px, 1.7fr) minmax(90px, 1fr) 34px 48px 34px",
             alignItems: "center",
             gap: "14px",
             padding: "12px 16px",
@@ -1008,6 +1644,29 @@ function renderSongs(songData) {
             textOverflow: "ellipsis"
         });
 
+        // Like button
+        const likeButton = document.createElement("button");
+
+        likeButton.className = "track-like-button";
+        likeButton.type = "button";
+        likeButton.dataset.songId = song.id;
+
+        const alreadyLiked = likedSongIds.has(Number(song.id));
+
+        likeButton.textContent = alreadyLiked ? "♥" : "+";
+        likeButton.classList.toggle("is-liked", alreadyLiked);
+
+        likeButton.title = alreadyLiked
+            ? "Remove from Liked Songs"
+            : "Add to Liked Songs";
+
+        likeButton.setAttribute("aria-label", likeButton.title);
+
+        likeButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            handleLikeClick(song, likeButton);
+        });
+
         // Duration
         const duration = document.createElement("span");
         duration.className = "track-duration";
@@ -1055,6 +1714,7 @@ function renderSongs(songData) {
             cover,
             information,
             album,
+            likeButton,
             duration,
             menuButton
         );
@@ -1064,9 +1724,21 @@ function renderSongs(songData) {
             playSong(song);
         });
 
-        songList.append(row);
+        targetList.append(row);
     });
+
+    // Refresh saved like states from the database
+    loadLikedSongIds();
 }
+
+document.addEventListener("click", (event) => {
+
+    const likedNavigation = event.target.closest('[data-page="liked"]');
+
+    if (!likedNavigation) return;
+
+    loadLikedSongsPage();
+});
 
 
 
@@ -1470,5 +2142,83 @@ async function refreshMusicLibrary() {
 
     } catch (error) {
         console.error("Library refresh error:", error);
+    }
+}
+
+// ==========================================
+// NEONWAVE - LIKED SONGS PAGE
+// ==========================================
+
+async function loadLikedSongsPage() {
+
+    const likedList = document.getElementById("liked-song-list");
+    const count = document.getElementById("liked-song-count");
+
+    if (!likedList) return;
+
+    likedList.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-orb">♫</div>
+            <h2>Loading liked songs...</h2>
+            <p>Getting your favourites.</p>
+        </div>
+    `;
+
+    try {
+        // Ensure the saved liked-song IDs are up to date
+        await loadLikedSongIds();
+
+        // Find the existing Liked Songs playlist
+        const playlistsResult = await window.pywebview.api.get_playlists();
+
+        if (!playlistsResult.success) {
+            throw new Error("Could not load playlists.");
+        }
+
+        const likedPlaylist = playlistsResult.playlists.find(
+            playlist => playlist.name === "Liked Songs"
+        );
+
+        if (!likedPlaylist) {
+            throw new Error("Liked Songs playlist was not found.");
+        }
+
+        // Load its songs
+        const result = await window.pywebview.api.get_playlist_songs(
+            likedPlaylist.id
+        );
+
+        if (!result.success) {
+            throw new Error(result.error || "Could not load liked songs.");
+        }
+
+        const songs = result.songs || [];
+
+        count.textContent = `${songs.length} songs`;
+
+        if (songs.length === 0) {
+            likedList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-orb heart-orb">♡</div>
+                    <h2>Your favourites live here.</h2>
+                    <p>Use the plus button on a track to add it to this collection.</p>
+                </div>
+            `;
+            return;
+        }
+
+        renderSongs(songs, likedList);
+
+    } catch (error) {
+
+        console.error("Liked Songs page error:", error);
+
+        likedList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-orb">!</div>
+                <h2>Couldn't load your favourites.</h2>
+                <p>${error.message}</p>
+            </div>
+        `;
     }
 }
