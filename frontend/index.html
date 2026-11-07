@@ -185,14 +185,39 @@
       </section>
 
       <section class="page-content alternate-page hidden" id="page-discover">
+
         <p class="eyebrow">EXPLORE YOUR SOUND</p>
+
         <h1>Discover<span>.</span></h1>
-        <p class="subheading">New corners of your own music collection.</p>
-        <div class="empty-state">
-          <div class="empty-orb">✳</div>
-          <h2>Your next favourite is already here.</h2>
-          <p>Discovery suggestions will appear here as your library grows.</p>
+
+        <p class="subheading">
+          Search for music from across YouTube.
+        </p>
+
+        <!-- ONLINE MUSIC SEARCH -->
+        <form class="online-search" id="online-search-form">
+
+          <input type="search" id="online-search-input" placeholder="Search songs, artists..." autocomplete="off">
+
+          <select id="online-search-provider">
+            <option value="youtube">YouTube</option>
+          </select>
+
+          <button type="submit" id="online-search-button">
+            Search
+          </button>
+
+        </form>
+
+        <!-- SEARCH STATUS -->
+        <p id="online-search-status"></p>
+
+        <!-- SEARCH RESULTS -->
+        <div id="online-search-results"></div>
+        <div id="youtube-player-container" class="youtube-player-container">
+          <div id="youtube-player"></div>
         </div>
+
       </section>
       <section class="page-content alternate-page hidden" id="page-library">
 

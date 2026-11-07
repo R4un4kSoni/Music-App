@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NeonWave YouTube Test</title>
+
+    <style>
+        body {
+            background: #101516;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        #player {
+            width: 640px;
+            height: 360px;
+            max-width: 100%;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 20px;
+            color: #65e6bd;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>NeonWave — YouTube Playback Test</h2>
+
+    <div id="player"></div>
+
+    <button onclick="playTestVideo()">Play test video</button>
+    <button onclick="pauseTestVideo()">Pause</button>
+
+    <p id="status">Loading YouTube API...</p>
+
+    <script>
+        let player;
+
+        function setStatus(message) {
+            document.getElementById("status").textContent = message;
+        }
+
+        // Load the official YouTube IFrame API
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+
+        document.head.appendChild(tag);
+
+        function onYouTubeIframeAPIReady() {
+            setStatus("API loaded. Creating player...");
+
+            player = new YT.Player("player", {
+                width: "640",
+                height: "360",
+                videoId: "M7lc1UVf-VE",
+
+                playerVars: {
+                    playsinline: 1,
+                    origin: window.location.origin
+                },
+
+                events: {
+                    onReady: () => {
+                        setStatus("Player ready. Click Play test video.");
+                    },
+
+                    onStateChange: (event) => {
+                        const states = {
+                            "-1": "Unstarted",
+                            "0": "Video ended",
+                            "1": "Playing",
+                            "2": "Paused",
+                            "3": "Buffering",
+                            "5": "Video cued"
+                        };
+
+                        setStatus(
+                            "Player state: " +
+                            (states[event.data] || event.data)
+                        );
+                    },
+
+                    onError: (event) => {
+                        setStatus("YouTube player error: " + event.data);
+                        console.error("YouTube error:", event.data);
+                    },
+
+                    onAutoplayBlocked: () => {
+                        setStatus("Playback was blocked. Use the Play button.");
+                    }
+                }
+            });
+        }
+
+        function playTestVideo() {
+            if (player) player.playVideo();
+        }
+
+        function pauseTestVideo() {
+            if (player) player.pauseVideo();
+        }
+    </script>
+</body>
+</html>

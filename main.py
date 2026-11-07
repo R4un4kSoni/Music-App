@@ -1,24 +1,29 @@
+
 import webview
 from pathlib import Path
 from backend.api import NeonWaveAPI
 
 BASE_DIR = Path(__file__).resolve().parent
-HTML_FILE = BASE_DIR / "frontend" / 'index.html'
+HTML_FILE = BASE_DIR / "frontend" / "index.html"
 
 api = NeonWaveAPI()
 
 def main():
-    # Create a webview window and load the HTML file
     webview.create_window(
-        title="Music Player",
-        url=HTML_FILE.as_uri(),
+        title="NeonWave",
+        url="frontend/index.html",
         width=1200,
         height=800,
-        min_size=(900,600),
+        min_size=(900, 600),
         background_color="#0b0b0f",
         js_api=api
     )
-    webview.start(gui='qt',debug=True)
+
+    webview.start(
+        gui="qt",
+        debug=True,
+        http_server=True
+    )
 
 if __name__ == "__main__":
     main()

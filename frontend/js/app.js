@@ -37,6 +37,101 @@ const PLAYLIST_GRADIENTS = [
 
 
 // ==========================================
+// YOUTUBE PLAYER INITIALIZATION
+// ==========================================
+
+function initializeYouTubePlayer() {
+    const playerElement = document.getElementById("youtube-player");
+
+    if (!playerElement) {
+        console.error("YouTube player element not found.");
+        return;
+    }
+
+    // Keep the embedded player visible.
+    const container = document.getElementById("youtube-player-container");
+
+    if (container) {
+        container.style.width = "360px";
+        container.style.height = "203px";
+        container.style.maxWidth = "100%";
+    }
+
+    // Load the official YouTube IFrame API.
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(script);
+}
+
+// YouTube calls this function when its API is loaded.
+window.onYouTubeIframeAPIReady = function () {
+    youtubeAPIReady = true;
+
+    youtubePlayer = new YT.Player("youtube-player", {
+        width: "360",
+        height: "203",
+
+        playerVars: {
+            playsinline: 1,
+            controls: 1,
+            rel: 0,
+            origin: window.location.origin
+        },
+
+        events: {
+            onReady: function () {
+                youtubePlayerReady = true;
+
+                console.log("NeonWave YouTube player ready.");
+
+                if (pendingYouTubeVideo) {
+                    youtubePlayer.loadVideoById(pendingYouTubeVideo.id);
+                    pendingYouTubeVideo = null;
+                }
+            },
+
+            onStateChange: function (event) {
+                // Playing
+                if (event.data === YT.PlayerState.PLAYING) {
+                    isPaused = false;
+                    document.getElementById("main-play").textContent = "Ⅱ";
+                }
+
+                // Paused or ended
+                if (
+                    event.data === YT.PlayerState.PAUSED ||
+                    event.data === YT.PlayerState.ENDED
+                ) {
+                    isPaused = true;
+                    document.getElementById("main-play").textContent = "▶";
+                }
+            },
+
+            onError: function (event) {
+                console.error("YOUTUBE ERROR CODE:", event.data);
+
+                console.error("FAILED VIDEO DETAILS:", {
+                    currentSong: currentSong,
+                    playerVideo: youtubePlayer
+                        ? youtubePlayer.getVideoData()
+                        : null
+                });
+
+                isPaused = true;
+                document.getElementById("main-play").textContent = "▶";
+            }
+        }
+    });
+};
+
+// Wait until the HTML elements exist.
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeYouTubePlayer);
+} else {
+    initializeYouTubePlayer();
+}
+
+// ==========================================
 // NEONWAVE - TOAST NOTIFICATIONS
 // ==========================================
 
@@ -1230,11 +1325,17 @@ const songList = document.getElementById("library-song-list");
 const songCount = document.getElementById("library-count");
 
 let songs = [];
-
 let currentSong = null;
+let currentProvider = "local";
 let isPaused = false;
 let pythonReady = false;
 let currentPlaylist = null;
+
+// YouTube player
+let youtubePlayer = null;
+let youtubeAPIReady = false;
+let youtubePlayerReady = false;
+let pendingYouTubeVideo = null;
 
 
 // ==========================================
@@ -1789,27 +1890,34 @@ function updatePlayer(song) {
 
 async function playSong(song) {
     console.log("Selected song object:", song);
-    console.log("Selected song path:", song?.path);
 
     if (!pythonReady) {
         console.error("Python backend is not ready yet.");
         return;
     }
 
+    if (!song || !song.path) {
+        console.error("Invalid local song:", song);
+        return;
+    }
+
     try {
+        // Stop YouTube playback before starting local music.
+        if (youtubePlayerReady && youtubePlayer) {
+            youtubePlayer.stopVideo();
+        }
 
         const result = await window.pywebview.api.play_song(song.path);
 
         console.log("Playback response:", result);
 
-        if (!result.success) {
-
-            console.error("Playback failed:", result.message);
-
+        if (!result || !result.success) {
+            console.error("Playback failed:", result?.message);
             return;
         }
 
         currentSong = song;
+        currentProvider = "local";
         isPaused = false;
 
         updatePlayer(song);
@@ -1818,16 +1926,112 @@ async function playSong(song) {
 
         console.log("Now playing:", song.title);
 
-    }
-
-    catch (error) {
-
+    } catch (error) {
         console.error("Playback error:", error);
-
     }
-
 }
 
+// ==========================================
+// PLAY ONLINE YOUTUBE SONG
+// ==========================================
+
+async function playOnlineSong(song) {
+
+    if (!song || !song.id) {
+        console.error("Invalid online song:", song);
+        return;
+    }
+
+    try {
+
+        const provider = song.provider || currentProvider;
+
+        const switchResult = await window.pywebview.api
+            .set_music_provider(provider);
+
+        if (!switchResult || !switchResult.success) {
+            throw new Error(
+                `Could not activate provider: ${provider}`
+            );
+        }
+
+        const response = await window.pywebview.api
+            .get_music_provider_capabilities();
+
+        if (!response || !response.capabilities) {
+            throw new Error("Could not retrieve provider capabilities.");
+        }
+
+        const capabilities = response.capabilities;
+
+        if (response.provider !== provider) {
+            throw new Error(
+                `Selected provider mismatch: ${provider}`
+            );
+        }
+
+        if (capabilities.embed_playback && provider === "youtube") {
+
+            if (!youtubePlayerReady || !youtubePlayer) {
+                throw new Error("YouTube player is not ready.");
+            }
+
+            currentSong = song;
+            currentProvider = provider;
+            isPaused = false;
+
+            youtubePlayer.loadVideoById(song.id);
+
+            updatePlayer(song);
+
+            document.getElementById("main-play").textContent = "Ⅱ";
+
+            console.log("Now playing online:", song.title);
+
+            return;
+        }
+
+        if (capabilities.audio_source) {
+
+            console.log(
+                "Starting authorized provider playback:",
+                provider
+            );
+
+            const result = await window.pywebview.api
+                .play_provider_track(song.id);
+
+            if (!result || !result.success) {
+                throw new Error(
+                    result?.message ||
+                    result?.error ||
+                    "Provider playback failed."
+                );
+            }
+
+            currentSong = song;
+            currentProvider = provider;
+            isPaused = false;
+
+            updatePlayer(song);
+
+            document.getElementById("main-play").textContent = "Ⅱ";
+
+            console.log("Now playing online:", song.title);
+
+            return;
+        }
+
+        throw new Error(
+            `${provider} does not currently support playback in NeonWave.`
+        );
+
+    } catch (error) {
+
+        console.error("Online playback error:", error);
+
+    }
+}
 
 // Move to the next song
 function nextSong() {
@@ -1881,10 +2085,7 @@ async function togglePlayback() {
 
     try {
 
-        // If no song is selected, play the first song.
-
         if (!currentSong) {
-
             if (songs.length > 0) {
                 await playSong(songs[0]);
             } else {
@@ -1894,35 +2095,41 @@ async function togglePlayback() {
             return;
         }
 
-        // Resume paused music.
+        // YouTube uses its own embedded player.
+        if (currentProvider === "youtube") {
 
-        if (isPaused) {
+            if (!youtubePlayerReady || !youtubePlayer) {
+                console.error("YouTube player is not ready.");
+                return;
+            }
 
-            await window.pywebview.api.resume_song();
-
-            isPaused = false;
-
-            document.getElementById("main-play").textContent = "Ⅱ";
+            if (isPaused) {
+                youtubePlayer.playVideo();
+                isPaused = false;
+                document.getElementById("main-play").textContent = "Ⅱ";
+            } else {
+                youtubePlayer.pauseVideo();
+                isPaused = true;
+                document.getElementById("main-play").textContent = "▶";
+            }
 
             return;
         }
 
-        // Pause currently playing music.
+        // Local and authorized-download playback use VLC.
+        if (isPaused) {
+            await window.pywebview.api.resume_song();
+            isPaused = false;
+            document.getElementById("main-play").textContent = "Ⅱ";
+        } else {
+            await window.pywebview.api.pause_song();
+            isPaused = true;
+            document.getElementById("main-play").textContent = "▶";
+        }
 
-        await window.pywebview.api.pause_song();
-
-        isPaused = true;
-
-        document.getElementById("main-play").textContent = "▶";
-
-    }
-
-    catch (error) {
-
+    } catch (error) {
         console.error("Playback control error:", error);
-
     }
-
 }
 
 document.getElementById("main-play").addEventListener("click", () => {
@@ -1968,6 +2175,7 @@ window.addEventListener("pywebviewready", async function () {
 
     await loadMusicLibrary();
     await loadPlaylists();
+    await loadMusicProviders();
 
 });
 
@@ -2222,3 +2430,213 @@ async function loadLikedSongsPage() {
         `;
     }
 }
+
+// ==========================================
+// NEONWAVE - ONLINE MUSIC SEARCH
+// ==========================================
+
+const onlineSearchForm = document.getElementById(
+    "online-search-form"
+);
+
+const onlineSearchInput = document.getElementById(
+    "online-search-input"
+);
+
+const onlineSearchProvider = document.getElementById(
+    "online-search-provider"
+);
+
+const onlineSearchButton = document.getElementById(
+    "online-search-button"
+);
+
+const onlineSearchStatus = document.getElementById(
+    "online-search-status"
+);
+
+const onlineSearchResults = document.getElementById(
+    "online-search-results"
+);
+
+
+async function searchOnlineMusic(query) {
+
+    if (!pythonReady) {
+        onlineSearchStatus.textContent =
+            "Connecting to NeonWave...";
+        return;
+    }
+
+    const selectedProvider = onlineSearchProvider.value;
+
+    onlineSearchButton.disabled = true;
+    onlineSearchButton.textContent = "Searching...";
+
+    onlineSearchStatus.textContent =
+        `Searching ${selectedProvider} for music...`;
+
+    onlineSearchResults.innerHTML = "";
+
+    try {
+
+        const result = await window.pywebview.api.search_online_music(
+            query,
+            selectedProvider
+        );
+
+        if (!result.success) {
+            throw new Error(
+                result.error || "Online search failed."
+            );
+        }
+
+        onlineSearchResults.innerHTML = "";
+
+        if (result.results.length === 0) {
+
+            onlineSearchStatus.textContent =
+                "No music found. Try another search.";
+
+            return;
+        }
+
+        onlineSearchStatus.textContent =
+            `${result.count} results found`;
+
+        result.results.forEach(song => {
+
+            const card = document.createElement("div");
+            card.className = "online-song-card";
+
+            const thumbnail = document.createElement("img");
+            thumbnail.className = "online-song-thumbnail";
+            thumbnail.alt = song.title;
+            thumbnail.loading = "lazy";
+
+            thumbnail.onerror = () => {
+                console.error(
+                    "THUMBNAIL FAILED:",
+                    song.thumbnail
+                );
+
+                thumbnail.style.display = "none";
+            };
+
+            thumbnail.onload = () => {
+                console.log(
+                    "THUMBNAIL LOADED:",
+                    song.title
+                );
+            };
+
+            thumbnail.src = song.thumbnail_data || song.thumbnail || "";
+
+            const information = document.createElement("div");
+            information.className = "online-song-information";
+
+            const title = document.createElement("strong");
+            title.textContent = song.title;
+
+            const artist = document.createElement("span");
+            artist.textContent = song.artist;
+
+            information.append(title, artist);
+
+            const provider = document.createElement("span");
+            provider.className = "online-song-provider";
+            provider.textContent = song.provider.toUpperCase();
+
+            card.append(
+                thumbnail,
+                information,
+                provider
+            );
+
+            card.addEventListener("click", () => {
+                playOnlineSong(song);
+            });
+
+            onlineSearchResults.appendChild(card);
+
+        });
+
+    } catch (error) {
+
+        console.error("Online music search error:", error);
+
+        onlineSearchStatus.textContent =
+            error.message || "Something went wrong.";
+
+    } finally {
+
+        onlineSearchButton.disabled = false;
+        onlineSearchButton.textContent = "Search";
+
+    }
+}
+
+
+async function loadMusicProviders() {
+
+    if (!pythonReady) return;
+
+    if (!onlineSearchProvider) {
+        console.error("Provider selector not found in HTML.");
+        return;
+    }
+
+    try {
+
+        const data = await window.pywebview.api.get_music_providers();
+
+        if (!data || !Array.isArray(data.providers)) {
+            throw new Error("Invalid provider data received.");
+        }
+
+        onlineSearchProvider.innerHTML = "";
+
+        data.providers.forEach(name => {
+
+            const option = document.createElement("option");
+
+            option.value = name;
+            option.textContent =
+                name.charAt(0).toUpperCase() + name.slice(1);
+
+            onlineSearchProvider.appendChild(option);
+
+        });
+
+        if (data.active && data.providers.includes(data.active)) {
+            onlineSearchProvider.value = data.active;
+        } else if (data.providers.length > 0) {
+            onlineSearchProvider.value = data.providers[0];
+        }
+
+        console.log("Music providers loaded:", data.providers);
+        console.log("Active provider:", onlineSearchProvider.value);
+
+    } catch (error) {
+
+        console.error("Provider loading failed:", error);
+
+    }
+}
+
+// Search when the form is submitted
+onlineSearchForm?.addEventListener("submit", event => {
+
+    event.preventDefault();
+
+    const query = onlineSearchInput.value.trim();
+
+    if (!query) {
+        onlineSearchStatus.textContent =
+            "Please enter a song or artist name.";
+        return;
+    }
+
+    searchOnlineMusic(query);
+
+});
