@@ -12,7 +12,9 @@ def create_valid_source():
         mime_type="audio/mpeg",
         extension=".mp3",
         expires_at=None,
-        download_allowed=True
+        download_allowed=True,
+        authorization_type="user_owned",
+        authorization_reference="test-asset-001"
     )
 
 

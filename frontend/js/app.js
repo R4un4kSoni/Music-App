@@ -1883,6 +1883,37 @@ function updatePlayer(song) {
 
 }
 
+// ==========================================
+// PLAYBACK TRANSITION CONTROLLER
+// ==========================================
+
+async function stopPreviousPlayback(nextProvider) {
+
+    // Switching away from YouTube.
+    if (
+        currentProvider === "youtube" &&
+        nextProvider !== "youtube"
+    ) {
+
+        if (youtubePlayerReady && youtubePlayer) {
+            youtubePlayer.stopVideo();
+        }
+
+        console.log("Stopped YouTube playback.");
+    }
+
+    // Switching from VLC to YouTube.
+    else if (
+        currentProvider !== "youtube" &&
+        nextProvider === "youtube"
+    ) {
+
+        await window.pywebview.api.stop_song();
+
+        console.log("Stopped VLC playback.");
+    }
+}
+
 
 // ==========================================
 // 10. PLAY A SONG
@@ -1903,9 +1934,7 @@ async function playSong(song) {
 
     try {
         // Stop YouTube playback before starting local music.
-        if (youtubePlayerReady && youtubePlayer) {
-            youtubePlayer.stopVideo();
-        }
+        await stopPreviousPlayback("local");
 
         const result = await window.pywebview.api.play_song(song.path);
 
@@ -1971,6 +2000,7 @@ async function playOnlineSong(song) {
         }
 
         if (capabilities.embed_playback && provider === "youtube") {
+            await stopPreviousPlayback("youtube");
 
             if (!youtubePlayerReady || !youtubePlayer) {
                 throw new Error("YouTube player is not ready.");
@@ -1992,7 +2022,7 @@ async function playOnlineSong(song) {
         }
 
         if (capabilities.audio_source) {
-
+            await stopPreviousPlayback(provider);
             console.log(
                 "Starting authorized provider playback:",
                 provider
@@ -2176,12 +2206,15 @@ window.addEventListener("pywebviewready", async function () {
     await loadMusicLibrary();
     await loadPlaylists();
     await loadMusicProviders();
+    await loadVidKrakenStatus();
 
 });
 
 playSong
 
 function formatTime(seconds) {
+    seconds = Math.floor(Math.max(0, seconds || 0));
+
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
 
@@ -2190,13 +2223,38 @@ function formatTime(seconds) {
 
 
 async function updateProgress() {
-    if (!pythonReady || !currentSong || isPaused || isSeeking) return;
+
+    if (!currentSong || isPaused || isSeeking) return;
 
     try {
-        const progress = await window.pywebview.api.get_progress();
 
-        const currentTime = progress.current_time;
-        const totalTime = progress.total_time;
+        let currentTime = 0;
+        let totalTime = 0;
+
+        // YouTube progress
+        if (currentProvider === "youtube") {
+
+            if (!youtubePlayerReady || !youtubePlayer) return;
+
+            currentTime = youtubePlayer.getCurrentTime();
+            totalTime = youtubePlayer.getDuration();
+
+        }
+
+        // VLC progress: local and authorized downloaded audio
+        else {
+
+            if (!pythonReady) return;
+
+            const progress = await window.pywebview.api.get_progress();
+
+            currentTime = progress.current_time;
+            totalTime = progress.total_time;
+
+        }
+
+        currentTime = Math.max(0, currentTime || 0);
+        totalTime = Math.max(0, totalTime || 0);
 
         document.getElementById("current-time").textContent =
             formatTime(currentTime);
@@ -2205,18 +2263,18 @@ async function updateProgress() {
             formatTime(totalTime);
 
         const percentage = totalTime > 0
-            ? (currentTime / totalTime) * 100
+            ? Math.min(100, (currentTime / totalTime) * 100)
             : 0;
 
         document.getElementById("progress-fill").style.width =
             `${percentage}%`;
 
     } catch (error) {
+
         console.error("Progress update error:", error);
+
     }
 }
-
-
 // Update progress every second
 setInterval(updateProgress, 1000);
 
@@ -2241,6 +2299,7 @@ function updateSeekPreview(event) {
 }
 
 async function finishSeeking(event) {
+
     if (!isSeeking) return;
 
     isSeeking = false;
@@ -2248,13 +2307,38 @@ async function finishSeeking(event) {
     const percentage = getSeekPercentage(event);
 
     try {
-        const progress = await window.pywebview.api.get_progress();
-        const targetTime = percentage * progress.total_time;
 
-        await window.pywebview.api.seek_song(targetTime);
-        updateProgress();
+        // YouTube seeking
+        if (currentProvider === "youtube") {
+
+            if (!youtubePlayerReady || !youtubePlayer) {
+                return;
+            }
+
+            const totalTime = youtubePlayer.getDuration();
+            const targetTime = percentage * totalTime;
+
+            youtubePlayer.seekTo(targetTime, true);
+
+        }
+
+        // VLC seeking
+        else {
+
+            const progress = await window.pywebview.api.get_progress();
+
+            const targetTime = percentage * progress.total_time;
+
+            await window.pywebview.api.seek_song(targetTime);
+
+        }
+
+        await updateProgress();
+
     } catch (error) {
+
         console.error("Seek error:", error);
+
     }
 }
 
@@ -2640,3 +2724,85 @@ onlineSearchForm?.addEventListener("submit", event => {
     searchOnlineMusic(query);
 
 });
+
+
+// ==========================================
+// 15. VIDKRAKEN ACCOUNT STATUS
+// ==========================================
+
+async function loadVidKrakenStatus() {
+
+    const statusElement = document.getElementById("vidkraken-status");
+    const planElement = document.getElementById("vidkraken-plan");
+    const downloadsElement = document.getElementById("vidkraken-downloads");
+    const bandwidthElement = document.getElementById("vidkraken-bandwidth");
+    const errorElement = document.getElementById("vidkraken-error");
+    const refreshButton = document.getElementById("refresh-vidkraken");
+
+    if (!statusElement || !refreshButton) {
+        console.error("VidKraken panel elements were not found.");
+        return;
+    }
+
+    refreshButton.disabled = true;
+    refreshButton.textContent = "↻ Checking...";
+    statusElement.textContent = "Checking...";
+    errorElement.style.display = "none";
+    errorElement.textContent = "";
+
+    try {
+
+        const result = await getVidKrakenStatus();
+
+        if (!result.success) {
+            throw new Error(result.error || "Could not retrieve account status.");
+        }
+
+        statusElement.textContent = "Connected";
+
+
+        planElement.textContent =
+            result.plan?.id ?? "Unknown";
+
+        const usage = result.usage || {};
+
+        const downloadQuota = usage.download_count || {};
+        const bandwidthQuota = usage.bandwidth_mb || {};
+
+        downloadsElement.textContent =
+            downloadQuota.unlimited
+                ? `${downloadQuota.used ?? 0} used · Unlimited`
+                : `${downloadQuota.used ?? "—"} / ${downloadQuota.granted ?? "—"}`;
+
+        bandwidthElement.textContent =
+            bandwidthQuota.unlimited
+                ? `${bandwidthQuota.used ?? 0} MB used · Unlimited`
+                : `${bandwidthQuota.used ?? "—"} / ${bandwidthQuota.granted ?? "—"} MB`;
+
+    } catch (error) {
+
+        console.error("VidKraken panel error:", error);
+
+        statusElement.textContent = "Unavailable";
+        planElement.textContent = "—";
+        downloadsElement.textContent = "—";
+        bandwidthElement.textContent = "—";
+
+        errorElement.textContent =
+            error.message || "Could not connect to VidKraken.";
+
+        errorElement.style.display = "block";
+
+    } finally {
+
+        refreshButton.disabled = false;
+        refreshButton.textContent = "↻ Refresh status";
+
+    }
+}
+
+
+// Refresh button
+document
+    .getElementById("refresh-vidkraken")
+    ?.addEventListener("click", loadVidKrakenStatus);

@@ -20,14 +20,17 @@ class FakeProvider(BaseMusicProvider):
             url="https://example.com/audio.mp3",
             mime_type="audio/mpeg",
             extension=".mp3",
-            download_allowed=True
+            download_allowed=True,
+            authorization_type="user_owned",
+            authorization_reference="test-asset-001"
         )
 
     def get_capabilities(self):
         return {
             "search": True,
             "audio_source": True,
-            "embed_playback": False
+            "embed_playback": False,
+            "chunk_download": True
         }
 
 
@@ -104,6 +107,37 @@ class TestMusicService(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertIsInstance(result["source"], AudioSource)
+
+    def test_reject_provider_without_chunk_download(self):
+        self.provider.get_capabilities = Mock(return_value={
+            "search": True,
+            "audio_source": True,
+            "embed_playback": False,
+            "chunk_download": False
+        })
+
+        self.provider.get_audio_source = Mock()
+
+        result = self.music.get_audio_source("track-123")
+
+        self.assertFalse(result["success"])
+        self.assertIn("chunk downloading", result["error"])
+        self.provider.get_audio_source.assert_not_called()
+
+    def test_reject_provider_without_audio_source(self):
+        self.provider.get_capabilities = Mock(return_value={
+            "search": True,
+            "audio_source": False,
+            "embed_playback": True
+        })
+
+        self.provider.get_audio_source = Mock()
+
+        result = self.music.get_audio_source("track-123")
+
+        self.assertFalse(result["success"])
+        self.assertIn("downloadable audio", result["error"])
+        self.provider.get_audio_source.assert_not_called()
 
     def test_reject_missing_track_id(self):
         result = self.music.get_audio_source("")

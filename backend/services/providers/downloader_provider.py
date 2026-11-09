@@ -8,16 +8,14 @@ class DownloaderProvider(BaseMusicProvider):
     @abstractmethod
     def get_audio_source(self, track_id):
         """
-        Return an authorized AudioSource for a track.
-
-        Implementations must only return sources that
-        explicitly permit direct audio downloading.
+        Return an AudioSource only when downloading is authorized
+        for the requested content.
         """
         pass
 
     def get_capabilities(self):
         return {
-            "search": True,
+            "search": False,
             "audio_source": True,
             "embed_playback": False,
             "chunk_download": True

@@ -1,4 +1,3 @@
-
 import time
 from urllib.parse import urlparse
 
@@ -10,6 +9,12 @@ def validate_audio_source(source):
 
     if not source.download_allowed:
         return False, "Provider does not authorize downloading"
+
+    if not source.authorization_type:
+        return False, "Authorization type is missing"
+
+    if not source.authorization_reference:
+        return False, "Authorization reference is missing"
 
     if not source.url:
         return False, "Audio URL is missing"

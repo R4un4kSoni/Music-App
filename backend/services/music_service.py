@@ -92,8 +92,21 @@ class MusicService:
             }
 
         try:
-            source = self.provider.get_audio_source(track_id)
+            capabilities = self.provider.get_capabilities()
 
+            if not capabilities.get("audio_source", False):
+                return {
+                    "success": False,
+                    "error": "This provider does not support downloadable audio."
+                }
+
+            if not capabilities.get("chunk_download", False):
+                return {
+                    "success": False,
+                    "error": "This provider does not support chunk downloading."
+                }
+
+            source = self.provider.get_audio_source(track_id)
             if source is None:
                 return {
                     "success": False,

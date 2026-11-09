@@ -39,6 +39,139 @@ class TestChunkLoader(unittest.TestCase):
 
         return response
 
+
+    # --------------------------------------------------
+    # Redirect security
+    # --------------------------------------------------
+
+    def test_follows_valid_https_redirect(self):
+        loader = self._create_test_loader()
+
+        redirect_response = MagicMock()
+        redirect_response.status_code = 302
+        redirect_response.headers = {
+            "Location": "https://cdn.example.com/audio.mp3"
+        }
+
+        final_response = MagicMock()
+        final_response.status_code = 206
+        final_response.url = "https://cdn.example.com/audio.mp3"
+
+        loader.session.get = MagicMock(
+            side_effect=[redirect_response, final_response]
+        )
+
+        try:
+            response = loader._get_with_safe_redirects(
+                loader.audio_url,
+                headers={},
+                stream=True,
+                timeout=(10, 30)
+            )
+
+            self.assertIs(response, final_response)
+            self.assertEqual(loader.session.get.call_count, 2)
+            redirect_response.close.assert_called_once()
+            final_response.close.assert_not_called()
+
+            second_call = loader.session.get.call_args_list[1]
+            self.assertEqual(
+                second_call.args[0],
+                "https://cdn.example.com/audio.mp3"
+            )
+        finally:
+            final_response.close()
+            loader.cleanup()
+
+    def test_rejects_http_redirect(self):
+        loader = self._create_test_loader()
+
+        redirect_response = MagicMock()
+        redirect_response.status_code = 302
+        redirect_response.headers = {
+            "Location": "http://cdn.example.com/audio.mp3"
+        }
+
+        loader.session.get = MagicMock(
+            return_value=redirect_response
+        )
+
+        try:
+            with self.assertRaises(RuntimeError):
+                loader._get_with_safe_redirects(
+                    loader.audio_url,
+                    headers={},
+                    stream=True,
+                    timeout=(10, 30)
+                )
+
+            self.assertEqual(loader.session.get.call_count, 1)
+            redirect_response.close.assert_called_once()
+        finally:
+            loader.cleanup()
+
+    def test_rejects_cross_host_redirect_with_sensitive_headers(self):
+        loader = self._create_test_loader()
+
+        redirect_response = MagicMock()
+        redirect_response.status_code = 302
+        redirect_response.headers = {
+            "Location": "https://cdn.example.net/audio.mp3"
+        }
+
+        loader.session.get = MagicMock(
+            return_value=redirect_response
+        )
+
+        try:
+            with self.assertRaises(RuntimeError):
+                loader._get_with_safe_redirects(
+                    loader.audio_url,
+                    headers={
+                        "Authorization": "Bearer test-token"
+                    },
+                    stream=True,
+                    timeout=(10, 30)
+                )
+
+            self.assertEqual(loader.session.get.call_count, 1)
+            redirect_response.close.assert_called_once()
+        finally:
+            loader.cleanup()
+
+    def test_rejects_too_many_redirects(self):
+        loader = self._create_test_loader()
+
+        redirect_response = MagicMock()
+        redirect_response.status_code = 302
+        redirect_response.headers = {
+            "Location": "https://example.com/audio.mp3"
+        }
+
+        loader.session.get = MagicMock(
+            return_value=redirect_response
+        )
+
+        try:
+            with self.assertRaises(RuntimeError):
+                loader._get_with_safe_redirects(
+                    loader.audio_url,
+                    headers={},
+                    stream=True,
+                    timeout=(10, 30)
+                )
+
+            self.assertEqual(
+                loader.session.get.call_count,
+                loader.MAX_REDIRECTS + 1
+            )
+
+            self.assertEqual(
+                redirect_response.close.call_count,
+                loader.MAX_REDIRECTS + 1
+            )
+        finally:
+            loader.cleanup()
     # --------------------------------------------------
     # Initialization
     # --------------------------------------------------
@@ -59,6 +192,18 @@ class TestChunkLoader(unittest.TestCase):
     def test_reject_http_url(self):
         with self.assertRaises(ValueError):
             ChunkLoader("http://example.com/audio.mp3")
+
+    def test_rejects_https_url_without_hostname(self):
+        with self.assertRaises(ValueError):
+            ChunkLoader("https:///audio.mp3")
+
+    def test_rejects_url_with_embedded_credentials(self):
+        with self.assertRaises(ValueError):
+            ChunkLoader("https://user:password@example.com/audio.mp3")
+
+    def test_rejects_invalid_url_port(self):
+        with self.assertRaises(ValueError):
+            ChunkLoader("https://example.com:99999/audio.mp3")
 
     def test_reject_invalid_chunk_size(self):
         with self.assertRaises(ValueError):

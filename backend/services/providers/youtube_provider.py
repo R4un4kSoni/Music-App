@@ -1,13 +1,6 @@
-
-import os
 import requests
-
-from dotenv import load_dotenv
 from .base_provider import BaseMusicProvider
-
-
-# Load environment variables from the project root.
-load_dotenv()
+from backend.services.config import settings
 
 
 class YouTubeProvider(BaseMusicProvider):
@@ -15,7 +8,7 @@ class YouTubeProvider(BaseMusicProvider):
     API_URL = "https://www.googleapis.com/youtube/v3/search"
 
     def __init__(self):
-        self.api_key = os.getenv("YOUTUBE_API_KEY")
+        self.api_key = settings.YOUTUBE_API_KEY
 
     def search(self, query: str) -> dict:
         """

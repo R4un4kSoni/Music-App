@@ -9,6 +9,13 @@ import requests
 
 
 class ChunkLoader:
+    MAX_REDIRECTS = 5
+
+    SENSITIVE_HEADERS = {
+        "authorization",
+        "cookie",
+        "proxy-authorization"
+    }
 
     def __init__(
         self,
@@ -16,7 +23,23 @@ class ChunkLoader:
         chunk_size=1024 * 1024,
         headers=None
     ):
-        if not isinstance(audio_url, str) or not audio_url.startswith("https://"):
+        if not isinstance(audio_url, str):
+            raise ValueError("A valid HTTPS audio URL is required.")
+
+        parsed_url = urlparse(audio_url)
+
+        try:
+            valid_port = parsed_url.port is None or 1 <= parsed_url.port <= 65535
+        except ValueError:
+            valid_port = False
+
+        if (
+            parsed_url.scheme != "https"
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or not valid_port
+        ):
             raise ValueError("A valid HTTPS audio URL is required.")
 
         if not isinstance(chunk_size, int) or chunk_size <= 0:
@@ -52,11 +75,11 @@ class ChunkLoader:
             "Range": "bytes=0-0"
         }
 
-        response = self.session.get(
+        response = self._get_with_safe_redirects(
             self.audio_url,
             headers=headers,
             stream=True,
-            timeout=(10, 30)
+            timeout=(10, 60)
         )
 
         try:
@@ -99,6 +122,81 @@ class ChunkLoader:
 
         finally:
             response.close()
+
+    def _get_with_safe_redirects(self, url, headers, stream, timeout):
+        """Follow HTTPS redirects safely without forwarding sensitive headers across hosts."""
+        from urllib.parse import urljoin
+
+        current_url = url
+        current_headers = dict(headers)
+        original_host = None
+
+        for redirect_count in range(self.MAX_REDIRECTS + 1):
+            parsed = urlparse(current_url)
+
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+            ):
+                raise RuntimeError("Redirect target is not a valid HTTPS URL.")
+
+            if original_host is None:
+                original_host = (parsed.hostname.lower(), parsed.port or 443)
+
+            response = self.session.get(
+                current_url,
+                headers=current_headers,
+                stream=stream,
+                timeout=timeout,
+                allow_redirects=False
+            )
+
+            if response.status_code not in (301, 302, 303, 307, 308):
+                return response
+
+            try:
+                location = response.headers.get("Location")
+
+                if not location:
+                    raise RuntimeError("Redirect response has no Location header.")
+
+                if redirect_count >= self.MAX_REDIRECTS:
+                    raise RuntimeError("Too many redirects.")
+
+                next_url = urljoin(current_url, location)
+                next_parsed = urlparse(next_url)
+
+                if (
+                    next_parsed.scheme != "https"
+                    or not next_parsed.hostname
+                    or next_parsed.username is not None
+                    or next_parsed.password is not None
+                ):
+                    raise RuntimeError("Redirect target is not a valid HTTPS URL.")
+
+                next_host = (
+                    next_parsed.hostname.lower(),
+                    next_parsed.port or 443
+                )
+
+                if next_host != original_host:
+                    sensitive = self.SENSITIVE_HEADERS.intersection(
+                        header.lower() for header in current_headers
+                    )
+
+                    if sensitive:
+                        raise RuntimeError(
+                            "Cross-host redirect blocked because sensitive headers are present."
+                        )
+
+                current_url = next_url
+
+            finally:
+                response.close()
+
+        raise RuntimeError("Too many redirects.")
 
     def validate_response(self, response):
         """Validate the final URL and response content type."""
@@ -187,11 +285,11 @@ class ChunkLoader:
             try:
                 part_path.unlink(missing_ok=True)
 
-                response = self.session.get(
+                response = self._get_with_safe_redirects(
                     self.audio_url,
                     headers=headers,
                     stream=True,
-                    timeout=(10, 60)
+                    timeout=(10, 30)
                 )
 
                 if response.status_code != 206:

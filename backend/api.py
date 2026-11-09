@@ -1,12 +1,11 @@
-
 import os
 import base64
 
 import requests
-from dotenv import load_dotenv
 
 from backend.library import scan_music_folder
 from backend.player import MusicPlayer
+from backend.services.vidkraken_client import VidKrakenClient
 
 from backend.database import (
     create_tables,
@@ -30,9 +29,6 @@ from backend.playlist import (
 from backend.services.music_service import MusicService
 
 
-load_dotenv()
-
-
 class NeonWaveAPI:
 
     def __init__(self):
@@ -41,6 +37,7 @@ class NeonWaveAPI:
         create_tables()
 
         self.music_service = MusicService()
+        self.vidkraken = VidKrakenClient()
 
     # ==========================================
     # CONNECTION
@@ -48,6 +45,87 @@ class NeonWaveAPI:
 
     def ping(self):
         return "Python backend connected successfully!"
+
+
+    # ==========================================
+    # VIDKRAKEN ACCOUNT STATUS
+    # ==========================================
+
+
+
+    def get_vidkraken_status(self):
+        try:
+            result = self.vidkraken.get_account()
+
+            if not result.get("success"):
+                return result
+
+            account = result.get("account", {})
+
+            if not isinstance(account, dict):
+                return {
+                    "success": False,
+                    "error": "Invalid account response."
+                }
+
+            plan = account.get("plan", {})
+            balances = account.get("balances", {})
+
+            if not isinstance(plan, dict):
+                plan = {}
+
+            if not isinstance(balances, dict):
+                balances = {}
+
+            def normalize_quota(quota):
+                if not isinstance(quota, dict):
+                    return {
+                        "granted": None,
+                        "used": None,
+                        "remaining": None,
+                        "unlimited": False,
+                        "resets_at": None
+                    }
+
+                return {
+                    "granted": quota.get("granted"),
+                    "used": quota.get("used"),
+                    "remaining": quota.get("remaining"),
+                    "unlimited": quota.get("unlimited", False),
+                    "resets_at": quota.get("resetsAt")
+                }
+
+            return {
+                "success": True,
+
+                "plan": {
+                    "id": plan.get("id")
+                },
+
+                "usage": {
+                    "download_count": normalize_quota(
+                        balances.get("download_count")
+                    ),
+
+                    "bandwidth_mb": normalize_quota(
+                        balances.get("bandwidth_mb")
+                    ),
+
+                    "info": normalize_quota(
+                        balances.get("info")
+                    )
+                }
+            }
+
+        except Exception as error:
+            print("VIDKRAKEN STATUS ERROR:", error)
+
+            return {
+                "success": False,
+                "error": "Could not retrieve VidKraken account status."
+            }
+
+
 
     # ==========================================
     # LOCAL MUSIC LIBRARY

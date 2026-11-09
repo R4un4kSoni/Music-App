@@ -13,3 +13,29 @@ async function getSavedSongs() {
         return [];
     }
 }
+
+
+async function getVidKrakenStatus() {
+    try {
+        if (!window.pywebview?.api) {
+            throw new Error("Python backend is not ready.");
+        }
+
+        const response =
+            await window.pywebview.api.get_vidkraken_status();
+
+        if (!response || typeof response.success !== "boolean") {
+            throw new Error("Invalid VidKraken response.");
+        }
+
+        return response;
+
+    } catch (error) {
+        console.error("VidKraken status error:", error);
+
+        return {
+            success: false,
+            error: error.message || "Could not retrieve account status."
+        };
+    }
+}
