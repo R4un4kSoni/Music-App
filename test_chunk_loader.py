@@ -39,12 +39,57 @@ class TestChunkLoader(unittest.TestCase):
 
         return response
 
+    # --------------------------------------------------
+    # Public host validation
+    # --------------------------------------------------
+
+    @patch("backend.services.chunk_loader.socket.getaddrinfo")
+    def test_accepts_public_ip(self, mock_getaddrinfo):
+        mock_getaddrinfo.return_value = [
+            (
+                2,
+                1,
+                6,
+                "",
+                ("93.184.216.34", 443)
+            )
+        ]
+
+        ChunkLoader._validate_public_host("example.com")
+
+    @patch("backend.services.chunk_loader.socket.getaddrinfo")
+    def test_rejects_private_ip(self, mock_getaddrinfo):
+        mock_getaddrinfo.return_value = [
+            (
+                2,
+                1,
+                6,
+                "",
+                ("127.0.0.1", 443)
+            )
+        ]
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "public IP addresses"
+        ):
+            ChunkLoader._validate_public_host("example.com")
 
     # --------------------------------------------------
     # Redirect security
     # --------------------------------------------------
 
-    def test_follows_valid_https_redirect(self):
+    @patch("backend.services.chunk_loader.socket.getaddrinfo")
+    def test_follows_valid_https_redirect(self, mock_getaddrinfo):
+        mock_getaddrinfo.return_value = [
+    (
+        2,
+        1,
+        6,
+        "",
+        ("93.184.216.34", 443)
+    )
+    ]
         loader = self._create_test_loader()
 
         redirect_response = MagicMock()
@@ -107,6 +152,68 @@ class TestChunkLoader(unittest.TestCase):
 
             self.assertEqual(loader.session.get.call_count, 1)
             redirect_response.close.assert_called_once()
+        finally:
+            loader.cleanup()
+
+    def test_rejects_redirect_with_invalid_port(self):
+        loader = self._create_test_loader()
+
+        redirect_response = MagicMock()
+        redirect_response.status_code = 302
+        redirect_response.headers = {
+            "Location": "https://cdn.example.com:abc/audio.mp3"
+        }
+
+        loader.session.get = MagicMock(
+            return_value=redirect_response
+        )
+
+        try:
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "invalid port"
+            ):
+                loader._get_with_safe_redirects(
+                    loader.audio_url,
+                    headers={},
+                    stream=True,
+                    timeout=(10, 30)
+                )
+
+            self.assertEqual(loader.session.get.call_count, 1)
+            redirect_response.close.assert_called_once()
+
+        finally:
+            loader.cleanup()
+
+    def test_rejects_redirect_with_out_of_range_port(self):
+        loader = self._create_test_loader()
+
+        redirect_response = MagicMock()
+        redirect_response.status_code = 302
+        redirect_response.headers = {
+            "Location": "https://cdn.example.com:99999/audio.mp3"
+        }
+
+        loader.session.get = MagicMock(
+            return_value=redirect_response
+        )
+
+        try:
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "invalid port"
+            ):
+                loader._get_with_safe_redirects(
+                    loader.audio_url,
+                    headers={},
+                    stream=True,
+                    timeout=(10, 30)
+                )
+
+            self.assertEqual(loader.session.get.call_count, 1)
+            redirect_response.close.assert_called_once()
+
         finally:
             loader.cleanup()
 
@@ -267,6 +374,38 @@ class TestChunkLoader(unittest.TestCase):
             )
 
             response.close.assert_called_once()
+        finally:
+            loader.cleanup()
+
+    @patch("backend.services.chunk_loader.requests.Session")
+    def test_rejects_source_exceeding_maximum_size(self, mock_session):
+        loader = ChunkLoader(
+            "https://example.com/audio.mp3",
+            chunk_size=1024
+        )
+
+        try:
+            response = MagicMock()
+            response.status_code = 206
+            response.url = "https://example.com/audio.mp3"
+
+            response.headers = {
+                "Content-Range": (
+                    f"bytes 0-0/{ChunkLoader.MAX_DOWNLOAD_SIZE + 1}"
+                ),
+                "Content-Type": "audio/mpeg"
+            }
+
+            mock_session.return_value.get.return_value = response
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "maximum allowed size"
+            ):
+                loader.check_source()
+
+            response.close.assert_called_once()
+
         finally:
             loader.cleanup()
 

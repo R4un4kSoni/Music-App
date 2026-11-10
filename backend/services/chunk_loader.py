@@ -4,18 +4,56 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.parse import urlparse
-
+import ipaddress
+import socket
 import requests
 
 
 class ChunkLoader:
     MAX_REDIRECTS = 5
+    MAX_DOWNLOAD_SIZE = 250 * 1024 * 1024  # 250 MB
 
     SENSITIVE_HEADERS = {
         "authorization",
         "cookie",
         "proxy-authorization"
     }
+    @staticmethod
+    def _validate_public_host(hostname):
+        """Reject hostnames that resolve to non-public IP addresses."""
+
+        try:
+            addresses = socket.getaddrinfo(
+                hostname,
+                None,
+                type=socket.SOCK_STREAM
+            )
+
+            if not addresses:
+                raise RuntimeError("Hostname did not resolve.")
+
+            for address in addresses:
+                ip = ipaddress.ip_address(address[4][0])
+
+                if not ip.is_global:
+                    raise RuntimeError(
+                        "Audio host must resolve to public IP addresses."
+                    )
+
+        except (socket.gaierror, ValueError):
+            raise RuntimeError("Could not validate audio host.")
+
+    @staticmethod
+    def _validate_url_port(parsed_url):
+        """Validate the port in an HTTPS URL."""
+
+        try:
+            port = parsed_url.port
+        except ValueError:
+            raise RuntimeError("Invalid HTTPS URL port.")
+
+        if port is not None and not 1 <= port <= 65535:
+            raise RuntimeError("Invalid HTTPS URL port.")
 
     def __init__(
         self,
@@ -27,6 +65,16 @@ class ChunkLoader:
             raise ValueError("A valid HTTPS audio URL is required.")
 
         parsed_url = urlparse(audio_url)
+
+        if (
+            parsed_url.scheme != "https"
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+        ):
+            raise ValueError("A valid HTTPS audio URL is required.")
+
+        self._validate_public_host(parsed_url.hostname)
 
         try:
             valid_port = parsed_url.port is None or 1 <= parsed_url.port <= 65535
@@ -107,6 +155,10 @@ class ChunkLoader:
 
             if self.total_size <= 0:
                 raise RuntimeError("Audio file is empty.")
+            if self.total_size > self.MAX_DOWNLOAD_SIZE:
+                raise RuntimeError(
+                    "Audio file exceeds the maximum allowed size of 250 MB."
+                )
 
             self.chunk_count = math.ceil(
                 self.total_size / self.chunk_size
@@ -141,9 +193,18 @@ class ChunkLoader:
                 or parsed.password is not None
             ):
                 raise RuntimeError("Redirect target is not a valid HTTPS URL.")
+            try:
+                port = parsed.port
+            except ValueError:
+                raise RuntimeError("Redirect target has an invalid port.")
+
+            if port is not None and not 1 <= port <= 65535:
+                raise RuntimeError("Redirect target has an invalid port.")
+
+            self._validate_public_host(parsed.hostname)
 
             if original_host is None:
-                original_host = (parsed.hostname.lower(), parsed.port or 443)
+                original_host = (parsed.hostname.lower(), port or 443)
 
             response = self.session.get(
                 current_url,
@@ -175,10 +236,19 @@ class ChunkLoader:
                     or next_parsed.password is not None
                 ):
                     raise RuntimeError("Redirect target is not a valid HTTPS URL.")
+                try:
+                    next_port = next_parsed.port
+                except ValueError:
+                    raise RuntimeError("Redirect target has an invalid port.")
+
+                if next_port is not None and not 1 <= next_port <= 65535:
+                    raise RuntimeError("Redirect target has an invalid port.")
+
+                self._validate_public_host(next_parsed.hostname)
 
                 next_host = (
                     next_parsed.hostname.lower(),
-                    next_parsed.port or 443
+                    next_port or 443
                 )
 
                 if next_host != original_host:
@@ -336,6 +406,11 @@ class ChunkLoader:
                         if received > expected_size:
                             raise RuntimeError(
                                 "Received more data than expected."
+                            )
+
+                        if received > self.MAX_DOWNLOAD_SIZE:
+                            raise RuntimeError(
+                                "Audio download exceeds the 250 MB limit."
                             )
 
                         file.write(data)
