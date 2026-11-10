@@ -430,6 +430,21 @@
     color: #a8caff;
 }
 
+/* Shuffle mode - warm red-orange glass */
+
+.neon-toast-shuffle {
+    background: rgba(75, 29, 24, 0.78);
+
+    border: 1px solid rgba(255, 105, 65, 0.38);
+
+    color: #ff997b;
+
+    box-shadow:
+        0 10px 35px rgba(0, 0, 0, 0.3),
+        0 0 18px rgba(255, 85, 45, 0.12),
+        inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
 /* ==========================================
    NEONWAVE - HOVER LIKE BUTTON
 ========================================== */

@@ -3795,3 +3795,21 @@ body[data-theme] #progress-fill {
     font-size: 10px;
     line-height: 1.5;
 }
+
+/* ==========================================
+   NEONWAVE - SHUFFLE ACTIVE STATE
+========================================== */
+
+#shuffle-button.active {
+    color: #ff633d !important;
+
+    background: rgba(255, 85, 45, 0.14);
+
+    border: 1px solid rgba(255, 105, 65, 0.35);
+
+    box-shadow:
+        0 0 12px rgba(255, 85, 45, 0.18),
+        inset 0 0 8px rgba(255, 85, 45, 0.08);
+
+    transition: all 0.25s ease;
+}

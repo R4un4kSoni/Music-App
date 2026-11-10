@@ -1102,6 +1102,9 @@ async function openPlaylist(playlist) {
             throw new Error(result.error);
         }
 
+        // The opened playlist becomes the active playback queue.
+        playbackQueue = [...result.songs];
+
         songCount.textContent = `${result.count} songs`;
 
         if (result.songs.length === 0) {
@@ -1325,12 +1328,18 @@ const songList = document.getElementById("library-song-list");
 const songCount = document.getElementById("library-count");
 
 let songs = [];
+let playbackQueue = [];
 let currentSong = null;
+let autoPlayEnabled = true;
+let shuffleEnabled = false;
+let autoAdvanceHandled = false;
+let shuffleHistory = [];
+let shuffleHistoryIndex = -1;
 let currentProvider = "local";
 let isPaused = false;
 let pythonReady = false;
 let currentPlaylist = null;
-
+let playbackState = "stopped";
 // YouTube player
 let youtubePlayer = null;
 let youtubeAPIReady = false;
@@ -1368,12 +1377,15 @@ function showLibraryMessage(title, description) {
 
 function displaySongs(songData) {
     songs = Array.isArray(songData) ? songData : [];
+
+    // The library becomes the active playback queue.
+    playbackQueue = [...songs];
+    currentPlaylist = null;
+
     songCount.textContent = `${songs.length} songs`;
 
     renderSongs(songs);
-
 }
-
 
 
 async function addSongToPlaylist(song) {
@@ -1919,7 +1931,7 @@ async function stopPreviousPlayback(nextProvider) {
 // 10. PLAY A SONG
 // ==========================================
 
-async function playSong(song) {
+async function playSong(song, recordShuffleHistory = true) {
     console.log("Selected song object:", song);
 
     if (!pythonReady) {
@@ -1948,7 +1960,28 @@ async function playSong(song) {
         currentSong = song;
         currentProvider = "local";
         isPaused = false;
+        playbackState = "playing";
+        autoAdvanceHandled = false;
 
+        // Record song in shuffle history.
+        if (shuffleEnabled && recordShuffleHistory) {
+
+            // Remove forward history when a new song is selected.
+            shuffleHistory = shuffleHistory.slice(
+                0,
+                shuffleHistoryIndex + 1
+            );
+
+            // Avoid recording the same song twice consecutively.
+            if (
+                shuffleHistory.length === 0 ||
+                shuffleHistory[shuffleHistory.length - 1].path !== song.path
+            ) {
+                shuffleHistory.push(song);
+            }
+
+            shuffleHistoryIndex = shuffleHistory.length - 1;
+        }
         updatePlayer(song);
 
         document.getElementById("main-play").textContent = "Ⅱ";
@@ -2064,32 +2097,86 @@ async function playOnlineSong(song) {
 }
 
 // Move to the next song
+// Move to the next song
 function nextSong() {
-    if (songs.length === 0) return;
+    if (playbackQueue.length === 0) return;
 
-    let currentIndex = songs.indexOf(currentSong);
+    // Shuffle navigation
+    if (shuffleEnabled) {
+
+        // Move forward through existing listening history.
+        if (shuffleHistoryIndex < shuffleHistory.length - 1) {
+
+            shuffleHistoryIndex++;
+
+            playSong(
+                shuffleHistory[shuffleHistoryIndex],
+                false
+            );
+
+            return;
+        }
+
+        // Otherwise, choose a new random song.
+        if (playbackQueue.length > 1) {
+
+            const availableSongs = playbackQueue.filter(
+                song => song.path !== currentSong?.path
+            );
+
+            const nextSongIndex = Math.floor(
+                Math.random() * availableSongs.length
+            );
+
+            playSong(availableSongs[nextSongIndex]);
+
+        }
+
+        return;
+    }
+
+    // Normal queue navigation
+    let currentIndex = playbackQueue.indexOf(currentSong);
     let nextIndex = currentIndex + 1;
 
-    if (nextIndex >= songs.length) {
+    if (nextIndex >= playbackQueue.length || currentIndex === -1) {
         nextIndex = 0;
     }
 
-    playSong(songs[nextIndex]);
+    playSong(playbackQueue[nextIndex]);
 }
 
 
 // Move to the previous song
 function previousSong() {
-    if (songs.length === 0) return;
+    if (playbackQueue.length === 0) return;
 
-    let currentIndex = songs.indexOf(currentSong);
-    let previousIndex = currentIndex - 1;
+    // Shuffle navigation
+    if (shuffleEnabled) {
 
-    if (previousIndex < 0) {
-        previousIndex = songs.length - 1;
+        if (shuffleHistoryIndex > 0) {
+
+            shuffleHistoryIndex--;
+
+            playSong(
+                shuffleHistory[shuffleHistoryIndex],
+                false
+            );
+
+        }
+
+        return;
     }
 
-    playSong(songs[previousIndex]);
+    // Normal queue navigation
+    let currentIndex = playbackQueue.indexOf(currentSong);
+    let previousIndex = currentIndex - 1;
+
+    if (currentIndex === -1 || previousIndex < 0) {
+        previousIndex = playbackQueue.length - 1;
+    }
+
+    playSong(playbackQueue[previousIndex]);
 }
 
 
@@ -2099,6 +2186,37 @@ document.getElementById("next-button")
 
 document.getElementById("previous-button")
     ?.addEventListener("click", previousSong);
+
+document.getElementById("shuffle-button")
+    ?.addEventListener("click", () => {
+
+        shuffleEnabled = !shuffleEnabled;
+        if (shuffleEnabled) {
+
+            // Start history with the currently playing song.
+            shuffleHistory = currentSong?.path ? [currentSong] : [];
+            shuffleHistoryIndex = shuffleHistory.length - 1;
+
+        } else {
+
+            shuffleHistory = [];
+            shuffleHistoryIndex = -1;
+
+        }
+
+        const shuffleButton = document.getElementById("shuffle-button");
+
+        shuffleButton.classList.toggle("active", shuffleEnabled);
+
+        if (shuffleEnabled) {
+            showToast("⤨ Shuffle Mode On", "shuffle");
+        } else {
+            showToast("⤨ Shuffle Mode Off", "info");
+        }
+
+        console.log("Shuffle:", shuffleEnabled ? "ON" : "OFF");
+
+    });
 
 
 
@@ -2146,7 +2264,18 @@ async function togglePlayback() {
             return;
         }
 
+
         // Local and authorized-download playback use VLC.
+
+        // Restart the track if it has finished.
+        if (
+            playbackState === "ended" ||
+            playbackState === "stopped"
+        ) {
+            await playSong(currentSong);
+            return;
+        }
+
         if (isPaused) {
             await window.pywebview.api.resume_song();
             isPaused = false;
@@ -2224,7 +2353,7 @@ function formatTime(seconds) {
 
 async function updateProgress() {
 
-    if (!currentSong || isPaused || isSeeking) return;
+    if (!currentSong || isSeeking) return;
 
     try {
 
@@ -2250,6 +2379,35 @@ async function updateProgress() {
 
             currentTime = progress.current_time;
             totalTime = progress.total_time;
+
+            playbackState = progress.playback_state;
+            const playButton = document.getElementById("main-play");
+            if (
+                playbackState === "ended" &&
+                autoPlayEnabled &&
+                !autoAdvanceHandled
+            ) {
+                autoAdvanceHandled = true;
+                nextSong();
+                return;
+            }
+
+            if (playbackState === "paused") {
+                isPaused = true;
+                playButton.textContent = "▶";
+            }
+            else if (playbackState === "playing") {
+                isPaused = false;
+                playButton.textContent = "Ⅱ";
+            }
+            else if (
+                playbackState === "ended" ||
+                playbackState === "stopped" ||
+                playbackState === "error"
+            ) {
+                isPaused = true;
+                playButton.textContent = "▶";
+            }
 
         }
 
